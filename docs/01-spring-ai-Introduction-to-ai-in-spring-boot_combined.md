@@ -89,18 +89,6 @@ Here's what we'll cover in this course:
     *   ⚠️ **Warning:** OpenAI requires a minimum $5 deposit.
     *   💡 **Tip:** Even if you're not comfortable spending, follow the concepts and demos. You can try them later.
 
-### Course Resources 📚
-
-*   Beautiful presentations to explain concepts.
-*   Code shared via a GitHub repository.
-
-### Enrollment and Cancellation Policy 🎟️
-
-*   Udemy offers a 30-day cancellation policy.
-*   Enroll, watch a few lectures, and if you're not satisfied, cancel within 30 days for a full refund.
-
-So, grab your laptop and your favorite energy drink and hit that enroll button! Let's build intelligent apps together.
-
 ---
 
 ## 2. What is Spring AI?
