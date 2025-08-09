@@ -1,16 +1,72 @@
 # 01 Spring AI – Introduction To AI In Spring Boot
 
 Sections-
-1. [Spring AI: From Hello World to Hello LMS](#1-spring-ai-from-hello-world-to-hello-lms)
-2. [What is Spring AI?](#2-what-is-spring-ai)
-3. [Building a Hello World Spring AI Application with OpenAI](#3-building-a-hello-world-spring-ai-application-with-openai)
-4. [Setting Up OpenAI API Key and Testing the Spring AI Application](#4-setting-up-openai-api-key-and-testing-the-spring-ai-application)
-5. [Chart Model and Chart Client Deep Dive](#5-chart-model-and-chart-client-deep-dive)
-6. [Integrating Llama with Spring AI](#6-integrating-llama-with-spring-ai)
-7. [Setting Up Local LM Models Using Docker](#7-setting-up-local-lm-models-using-docker)
-8. [Setting Up LM Models: Cloud Provider Approach with AWS Bedrock](#8-setting-up-lm-models-cloud-provider-approach-with-aws-bedrock)
-9. [Integrating Spring AI with AWS Bedrock](#9-integrating-spring-ai-with-aws-bedrock)
-10. [Leveraging Multiple Chat Models in Spring AI Applications](#10-leveraging-multiple-chat-models-in-spring-ai-applications)
+- [01 Spring AI – Introduction To AI In Spring Boot](#01-spring-ai--introduction-to-ai-in-spring-boot)
+  - [1. Spring AI: From Hello World to Hello LMS](#1-spring-ai-from-hello-world-to-hello-lms)
+    - [Why Spring AI is a Game Changer 🚀](#why-spring-ai-is-a-game-changer-)
+    - [Course Agenda 🗓️](#course-agenda-️)
+    - [Prerequisites 📝](#prerequisites-)
+  - [2. What is Spring AI?](#2-what-is-spring-ai)
+    - [Why Spring AI?](#why-spring-ai)
+    - [Vector Store Integration](#vector-store-integration)
+    - [Advanced Patterns and Features](#advanced-patterns-and-features)
+    - [DevOps Perspective](#devops-perspective)
+    - [Key Benefits](#key-benefits)
+    - [Use Cases](#use-cases)
+  - [3. Building a Hello World Spring AI Application with OpenAI](#3-building-a-hello-world-spring-ai-application-with-openai)
+    - [Project Setup](#project-setup)
+    - [Project Structure and Dependencies](#project-structure-and-dependencies)
+    - [Creating the REST Controller](#creating-the-rest-controller)
+    - [Integrating with OpenAI](#integrating-with-openai)
+    - [Configuring Logging](#configuring-logging)
+    - [Running the Application and Handling Errors](#running-the-application-and-handling-errors)
+  - [4. Setting Up OpenAI API Key and Testing the Spring AI Application](#4-setting-up-openai-api-key-and-testing-the-spring-ai-application)
+    - [Understanding OpenAI and ChatGPT 🤖](#understanding-openai-and-chatgpt-)
+    - [Obtaining Your OpenAI API Key 🔑](#obtaining-your-openai-api-key-)
+    - [Alternatives to Recharging 💰](#alternatives-to-recharging-)
+    - [OpenAI Pricing 💲](#openai-pricing-)
+    - [Configuring the API Key in Your Spring AI Application ⚙️](#configuring-the-api-key-in-your-spring-ai-application-️)
+    - [Testing Your Spring AI Application with Postman 🧪](#testing-your-spring-ai-application-with-postman-)
+    - [Importing the Postman Collection 📦](#importing-the-postman-collection-)
+    - [Understanding Non-Deterministic Responses 🤔](#understanding-non-deterministic-responses-)
+    - [Spring AI's Abstraction 🏗️](#spring-ais-abstraction-️)
+  - [5. Chart Model and Chart Client Deep Dive](#5-chart-model-and-chart-client-deep-dive)
+    - [Chart Model: The Engine ⚙️](#chart-model-the-engine-️)
+    - [Chart Client: The Steering Wheel 🚗](#chart-client-the-steering-wheel-)
+    - [Chart Model vs. Chart Client: Analogy 💡](#chart-model-vs-chart-client-analogy-)
+    - [How They Work Together 🤝](#how-they-work-together-)
+    - [Custom Chart Model Implementation 🛠️](#custom-chart-model-implementation-️)
+    - [Conclusion ✅](#conclusion-)
+  - [6. Integrating Llama with Spring AI](#6-integrating-llama-with-spring-ai)
+    - [Setting Up Llama](#setting-up-llama)
+    - [Integrating Llama into a Spring AI Application](#integrating-llama-into-a-spring-ai-application)
+    - [Key Considerations](#key-considerations)
+    - [Summary of Steps](#summary-of-steps)
+  - [7. Setting Up Local LM Models Using Docker](#7-setting-up-local-lm-models-using-docker)
+    - [System Requirements](#system-requirements)
+    - [Configuring Docker Desktop](#configuring-docker-desktop)
+    - [Running a Model](#running-a-model)
+    - [Integrating with Spring AI](#integrating-with-spring-ai)
+  - [8. Setting Up LM Models: Cloud Provider Approach with AWS Bedrock](#8-setting-up-lm-models-cloud-provider-approach-with-aws-bedrock)
+    - [Cloud Providers: A Third Approach](#cloud-providers-a-third-approach)
+      - [Key Differences from OpenAI](#key-differences-from-openai)
+      - [Benefits of Using Cloud Providers](#benefits-of-using-cloud-providers)
+    - [AWS Bedrock Demo](#aws-bedrock-demo)
+      - [What is AWS Bedrock?](#what-is-aws-bedrock)
+      - [Equivalent Services on Other Cloud Providers](#equivalent-services-on-other-cloud-providers)
+      - [Logging into the AWS Console](#logging-into-the-aws-console)
+      - [Accessing Bedrock](#accessing-bedrock)
+      - [Exploring the Model Catalog](#exploring-the-model-catalog)
+      - [Requesting Model Access](#requesting-model-access)
+      - [Setting Up Credentials for Spring AI Integration](#setting-up-credentials-for-spring-ai-integration)
+  - [9. Integrating Spring AI with AWS Bedrock](#9-integrating-spring-ai-with-aws-bedrock)
+  - [10. Leveraging Multiple Chat Models in Spring AI Applications](#10-leveraging-multiple-chat-models-in-spring-ai-applications)
+    - [Project Setup](#project-setup-1)
+    - [Disabling Auto-Configuration](#disabling-auto-configuration)
+    - [Creating Chat Client Beans](#creating-chat-client-beans)
+    - [Creating a Controller](#creating-a-controller)
+    - [Testing the Application](#testing-the-application)
+    - [Key Takeaways](#key-takeaways)
 
 
 ---
@@ -161,8 +217,8 @@ Let's create a "Hello World" Spring AI application integrated with an LLM model 
     *   Language: Java
     *   Build Tool: Maven (default)
     *   Spring Boot Version: Accept the default.
-    *   Group: `com.Easybeats`
-    *   Artifact: `openAI`
+    *   Group: `com.knowprogram`
+    *   Artifact: `openai`
     *   Description: (Optional)
     *   Package Name: (Default based on Group and Artifact)
     *   Packaging: Jar
@@ -184,27 +240,38 @@ Open the `pom.xml` file to verify the dependencies:
 
 ```xml
 <dependencies>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-devtools</artifactId>
-        <scope>runtime</scope>
-        <optional>true</optional>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.ai</groupId>
-        <artifactId>spring-ai-openai-spring-boot-starter</artifactId>
-        <version>0.8.0</version> <!-- Or the latest version -->
-    </dependency>
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-web</artifactId>
+	</dependency>
+	<dependency>
+		<groupId>org.springframework.ai</groupId>
+		<artifactId>spring-ai-starter-model-openai</artifactId>
+	</dependency>
+
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-devtools</artifactId>
+		<scope>runtime</scope>
+		<optional>true</optional>
+	</dependency>
 </dependencies>
+<dependencyManagement>
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-bom</artifactId>
+			<version>${spring-ai.version}</version>
+			<type>pom</type>
+			<scope>import</scope>
+		</dependency>
+	</dependencies>
+</dependencyManagement>
 ```
 
 ### Creating the REST Controller
 
-1.  Create a new package named `controller` under `com.easybeats.openai`.
+1.  Create a new package named `controller` under `com.knowprogram.openai`.
 2.  Create a new Java class named `ChatController` inside the `controller` package.
 3.  Annotate the class:
 
@@ -241,7 +308,7 @@ Open the `pom.xml` file to verify the dependencies:
 
     The `ChatClient` interface is implemented by `DefaultChatClient`.
 2.  Explain the Bean Creation Process:
-    *   When the OpenAI dependency is added, Spring Boot creates a bean of type `ChatModel` (specifically, `OpenAIChatModel`).
+    *   When the OpenAI dependency (`spring-ai-starter-model-openai`) is added, Spring Boot creates a bean of type `ChatModel` interface (specifically, `OpenAIChatModel` class).
     *   The framework interacts with the OpenAI chat model using this bean.
     *   Spring Boot also creates a bean of type `ChatClientBuilder` (specifically, `DefaultChatClientBuilder`).
     *   The `ChatClientBuilder` is injected into the `ChatController`.
@@ -265,9 +332,9 @@ Open the `pom.xml` file to verify the dependencies:
 1.  Open the `application.properties` file.
 2.  Add the following property to customize the console log pattern:
 
-    ```properties
-    logging.pattern.console=%clr(%d{HH:mm:ss.SSS}){green} %clr(%5p) {blue}%clr([%t]){red} %clr(---){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx
-    ```
+```properties
+logging.pattern.console=%green(%d{HH:mm:ss.SSS}) %blue(%-5level) %red([%thread]) %yellow(%logger{15}) - %msg%n
+```
 
     This pattern displays:
     *   Time (green)
@@ -289,6 +356,8 @@ Open the `pom.xml` file to verify the dependencies:
     *   Provide the API key to the Spring AI framework.
 
     The next step is to set up the OpenAI API key.
+
+**💡 Workaround for the OpenAI API Key: Generate the test API key via [https://openai.com/global-affairs/openai-academy](https://openai.com/global-affairs/openai-academy) and signup as a Developer. Create a new Organization, and generate the [test key](https://platform.openai.com/api-keys) without pay.**
 
 ---
 
@@ -316,7 +385,7 @@ OpenAI develops various AI models, and ChatGPT is a chatbot platform that utiliz
 7.  Click on **Create new secret key**.
 8.  Give your key a name and select a project (the default project is fine).
 9.  Click **Create Secret key**.
-10. Copy the generated API key (starts with `SK-`) and store it securely. This is your **secret key**.
+10. Copy the generated API key (starts with `sk-`) and store it securely. This is your **secret key**.
 
 ### Alternatives to Recharging 💰
 
@@ -356,7 +425,7 @@ If you don't want to recharge $5, you have a couple of options:
 3.  Include a `message` query parameter with your prompt. 📌 **Example:**
 
     ```
-    http://localhost:8080/your-endpoint?message=What is your name and which model are you using?
+    http://localhost:8080/api/chat?message=What is your name and which model are you using?
     ```
 
 4.  Verify that you receive a meaningful response from the AI model.
@@ -566,7 +635,7 @@ We can set up local LM models using Docker, similar to how we use it for databas
 To get started:
 
 1.  Install Docker Desktop. It's free for local development. Download it from the official Docker website based on your operating system.
-2.  Visit `docs.docker.com/model-runner`. 📝 **Note:** This feature is currently in beta.
+2.  Visit [https://docs.docker.com/ai/model-runner/](https://docs.docker.com/ai/model-runner/). 📝 **Note:** This feature is currently in beta.
 
 ### System Requirements
 
@@ -588,7 +657,8 @@ Alternatives include Olama and Docker Model Runner.
 
 1.  Open Docker Desktop.
 2.  Go to **Settings** and click on **Beta Features**.
-3.  Enable **Docker Model Runner**.
+3.  Enable **Docker Model Runner**. 
+    *   💡 **Note:**  If option not available in Docker GUI, then install it through docker engine:- `sudo apt-get install docker-model-plugin`. Check the installation status using `docker model version` & `docker model run ai/smollm2`.
 4.  Also, select **Enable host side TCP support** and set the port number to **12434**. This is the default port for open-source LM models.
     💡 **Tip:** This feature may become stable in the future.
 5.  Apply and restart Docker Desktop.
@@ -689,14 +759,14 @@ We'll now explore the cloud provider approach using AWS Bedrock as an example. Y
 
 #### What is AWS Bedrock?
 
-AWS Bedrock is a service that provides access to foundational models from various companies.
+[AWS Bedrock](https://aws.amazon.com/bedrock/) is a service that provides access to foundational models from various companies.
 
 *   You can find information about Amazon Bedrock on its product page.
 *   The pricing tab lists the available models from different providers.
 
 📌 **Example:**
-    *   Amazon offers its own foundational models like Amazon Titan.
-    *   Other providers include Anthropic, Cohere, Meta, Mistral, and Stability AI.
+* Amazon offers its own foundational models like Amazon Titan.
+* Other providers include Anthropic, Cohere, Meta, Mistral, and Stability AI.
 
 ⚠️ **Warning:** You won't find OpenAI models on AWS Bedrock because OpenAI is backed by Microsoft and primarily available through Azure.
 
@@ -711,8 +781,7 @@ AWS Bedrock is a service that provides access to foundational models from variou
 2.  You'll need an AWS account with a credit card set up.
     *   If you don't have an account or prefer not to use a credit card, you can skip the setup and watch the demo.
     *   If you have an account, try the demo, as the setup and testing should only cost a few cents.
-3.  Select the region closest to you.
-    *   📌 **Example:** Hyderabad was selected in the demo.
+3.  Select the region.
 
 📝 **Note:** The UI of the AWS console may change over time, but the underlying steps should remain consistent.
 
@@ -720,11 +789,9 @@ AWS Bedrock is a service that provides access to foundational models from variou
 
 1.  Search for "Bedrock" in the AWS console search box.
 2.  Open the Bedrock service.
-3.  Click on "Model providers" or "Model catalog" to view available models.
+3.  Click on "Model providers" or **"Model catalog"** to view available models.
 
 📝 **Note:** The available models vary depending on the selected region.
-
-📌 **Example:** In Hyderabad, only Amazon and Anthropic models were supported. Changing the region to Mumbai revealed more options.
 
 #### Exploring the Model Catalog
 
@@ -745,7 +812,7 @@ The model catalog displays models from various providers, including:
 By default, access to foundational models is disabled. You need to request access before using them.
 
 1.  Click the three dots next to the model you want to use and select "Modify access".
-2.  Select the models you want to access.
+2.  Select the models you want to access:- `Claude Sonnet 4`, and `Claude 3.7 Sonnet`.
 3.  Click "Request Model Access".
 4.  Select all the models you want to access and click "Next".
 5.  Click "Submit".
@@ -759,12 +826,13 @@ To enable communication between your Spring AI application and AWS Bedrock, you 
 1.  Go to IAM (Identity and Access Management).
 2.  Create a new policy.
     *   Service: Bedrock
-    *   Action: "InvokeModel" (under "Invoke Action")
+    *   Action: "InvokeModel" (under "Invoke Action") -> This is Read access.
     *   Resource: Initially, use "All resources" (wildcard "*") for the demo, but ⚠️ **Warning:** do not use this in production.  Instead, restrict access to specific models.
     *   Name: "invoke-bedrock-model-policy"
     *   Description: "Policy to invoke bedrock models"
 3.  Create a new user.
     *   Name: "spring-ai-demo"
+    *   Permissions Options: Attach policy directly.
     *   Attach the "invoke-bedrock-model-policy" policy.
 4.  Create an access key for the user.
     *   Go to the user's "Security credentials" tab.
@@ -792,8 +860,7 @@ Instead of an OpenAI starter project, we'll use the Bedrock connector.
 ```xml
 <dependency>
     <groupId>org.springframework.ai</groupId>
-    <artifactId>spring-ai-bedrock</artifactId>
-    <version>YOUR_SPRING_AI_VERSION</version>
+    <artifactId>spring-ai-starter-model-bedrock-converse</artifactId>
 </dependency>
 ```
 
@@ -806,25 +873,9 @@ Next, we need to configure the `application.properties` file.
 
 A common question is: How do I know which properties to configure for a specific model?
 
-The answer is the official Spring AI documentation. 💡 **Tip:** Always refer to the official documentation for the most up-to-date information.
+The answer is the official [Spring AI](https://docs.spring.io/spring-ai/reference/api/chat/bedrock-converse.html) documentation. 💡 **Tip:** Always refer to the official documentation for the most up-to-date information.
 
-The documentation provides details on dependencies and properties for various models, including:
-
-*   Amazon Bedrock
-*   Anthropic
-*   Azure OpenAI
-*   DeepInfra
-*   Docker Model Runner
-*   Google Vertex AI
-*   Grok
-*   Hugging Face
-*   Mistral
-*   Minimax
-*   Moonshot
-*   Nvidia
-*   Llama
-*   Perplexity
-*   OpenAI
+The documentation provides details on dependencies and properties for various models, including: Amazon Bedrock, Anthropic, Azure OpenAI, DeepInfra, Docker Model Runner, Google Vertex AI, Grok, Hugging Face, Mistral, Minimax, Moonshot, Nvidia, Llama, Perplexity, OpenAI
 
 For Amazon Bedrock, the following properties need to be configured:
 
@@ -836,10 +887,11 @@ For Amazon Bedrock, the following properties need to be configured:
 📌 **Example:**
 
 ```properties
-spring.ai.bedrock.aws.region=ap-south-1
+spring.ai.bedrock.aws.region=us-east-1
 spring.ai.bedrock.aws.access-key=YOUR_ACCESS_KEY
 spring.ai.bedrock.aws.secret-key=YOUR_SECRET_KEY
-spring.ai.bedrock.model=anthropic.claude-v2
+spring.ai.model.chat=bedrock-converse
+spring.ai.bedrock.converse.chat.options.model=anthropic.claude-sonnet-4-20250514-v1:0
 ```
 
 📝 **Note:** For the AWS region, you can find the code name in the AWS console.
@@ -853,8 +905,8 @@ The `spring.ai.bedrock.model` property specifies the model to use from Bedrock.
 To find the model ID, navigate to the AWS Bedrock service in the AWS console.
 
 1.  Go to the Model Catalog.
-2.  Select the desired model (e.g., Anthropic Claude).
-3.  Copy the model ID from the Inference profile.
+2.  Select the desired model (e.g., Anthropic Claude Sonnet 4).
+3.  Copy the model ID from the Inference profile (e.g., `anthropic.claude-sonnet-4-20250514-v1:0`).
 
 After configuring the properties, build the project.
 
@@ -868,21 +920,21 @@ To set the environment variable:
 
 1.  Go to Edit Configurations.
 2.  Modify options and select Environment variables.
-3.  Add `AWS_REGION` with the region value (e.g., `ap-south-1`).
+3.  Add `SPRING_AI_BEDROCK_AWS_REGION` with the region value (e.g., `us-east-1`).
 
-The environment variable name should be `AWS_REGION`.
+The environment variable name should be `SPRING_AI_BEDROCK_AWS_REGION`.
 
 After setting the environment variable, restart the application.
 
-If the application still fails to start, double-check the environment variable name. The framework might be expecting `AWS_REGION`.
+If the application still fails to start, double-check the environment variable name. The framework might be expecting `SPRING_AI_BEDROCK_AWS_REGION`.
 
 Once the application starts successfully, test the APIs using Postman.
 
-If you encounter an exception stating that the model ID is not supported for on-demand invocation, it means you need to use the model ID from the inference profile instead of the model catalog.
+If you encounter an **exception stating that the model ID is not supported for on-demand invocation**, it means you need to use the model ID from the inference profile instead of the model catalog.
 
 1.  In the AWS console, navigate to Bedrock.
-2.  Go to Cross-region inference under Infer.
-3.  Copy the model ID from the Inference profile ID column.
+2.  Go to Infer -> Cross-region inference.
+3.  Copy the value from the Inference profile ID column (`us.anthropic.claude-sonnet-4-20250514-v1:0`).
 
 Update the `spring.ai.bedrock.model` property with the new model ID and restart the application.
 
@@ -900,21 +952,40 @@ All the details discussed around AWS Bedrock are documented in the provided slid
 
 In real-world enterprise applications, it's common to work with multiple chat models within the same Spring AI application. No single AI model excels at all tasks, as different models possess varying capabilities. Adopting diverse models for specific use cases is a prevalent practice.
 
-This section outlines the steps to integrate multiple models into a Spring AI application. A sample project named "multi-modal" has been created, incorporating both a Llama model and an OpenAI model. This project will be available on GitHub.
+![Why use Multiple Chat Models](img/Why%20use%20Multiple%20Chat%20Models.png)
+
+This section outlines the steps to integrate multiple models into a Spring AI application. A sample project named "multi-modal" has been created, incorporating both a Llama model and an OpenAI model. 
 
 ### Project Setup
 
-1.  **Model Dependencies:** Include dependencies for the desired models (e.g., Llama, OpenAI) in your `pom.xml` or `build.gradle` file.
+1.  **Model Dependencies:** Include dependencies for the desired models (e.g.,  OpenAI, Bedrock) in your `pom.xml` or `build.gradle` file.
+
+    ```xml
+    <dependency>
+		<groupId>org.springframework.ai</groupId>
+		<artifactId>spring-ai-starter-model-bedrock-converse</artifactId>
+	</dependency>
+    <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-starter-model-openai</artifactId>
+    </dependency>
+    ```
+
 2.  **Configuration:** Configure the necessary properties in `application.properties` or `application.yml`.
 
     📌 **Example:**
 
     ```properties
-    spring.openai.api-key=YOUR_OPENAI_API_KEY
-    spring.ai.ollama.chat.model=llama2
-    ```
+    # openai
+    spring.ai.openai.api-key=
 
-    This configuration specifies the OpenAI API key and the Llama model to be used.
+    # bedrock
+    spring.ai.bedrock.aws.region=us-east-1
+    spring.ai.bedrock.aws.access-key=
+    spring.ai.bedrock.aws.secret-key=
+    spring.ai.model.chat=bedrock-converse
+    spring.ai.bedrock.converse.chat.options.model=us.anthropic.claude-sonnet-4-20250514-v1:0
+    ```
 
 ### Disabling Auto-Configuration
 
@@ -950,6 +1021,11 @@ Create a configuration class to define the `ChatClient` beans for each model.
         public ChatClient openAiChatClient(OpenAiChatModel openAiChatModel) {
             return ChatClient.create(openAiChatModel);
         }
+
+        @Bean
+        public ChatClient bedrockChatClient(BedrockProxyChatModel bedrockModel) {
+            return ChatClient.create(bedrockModel);
+        }
         ```
 
         This method injects the `OpenAiChatModel` bean (auto-configured by Spring AI) and uses it to create a `ChatClient` bean.
@@ -958,8 +1034,8 @@ Create a configuration class to define the `ChatClient` beans for each model.
 
         ```java
         @Bean
-        public ChatClient ollamaChatClient(OllamaChatModel ollamaChatModel) {
-            ChatClient.Builder chatClientBuilder = ChatClient.builder(ollamaChatModel);
+        public ChatClient openAiChatClient(OpenAiChatModel openAiChatModel) {
+            ChatClient.Builder chatClientBuilder = ChatClient.builder(openAiChatModel);
             // You can configure the builder here, e.g., set default system prompt
             // chatClientBuilder.defaultSystemPrompt("You are a helpful assistant.");
             return chatClientBuilder.build();
@@ -989,14 +1065,14 @@ Create a controller to expose REST endpoints that utilize the different chat mod
 4.  Inject the `ChatClient` beans into the controller using constructor injection and the `@Qualifier` annotation.
 
     ```java
-    private final ChatClient openAiChatClient;
-    private final ChatClient ollamaChatClient;
+     private final ChatClient openAiChatClient;
+    private final ChatClient bedrockChatClient;
 
     public MultiModelChatController(
             @Qualifier("openAiChatClient") ChatClient openAiChatClient,
-            @Qualifier("ollamaChatClient") ChatClient ollamaChatClient) {
+            @Qualifier("bedrockChatClient") ChatClient bedrockChatClient) {
         this.openAiChatClient = openAiChatClient;
-        this.ollamaChatClient = ollamaChatClient;
+        this.bedrockChatClient = bedrockChatClient;
     }
     ```
 
@@ -1007,12 +1083,12 @@ Create a controller to expose REST endpoints that utilize the different chat mod
     ```java
     @GetMapping("/openai/chat")
     public String openAiChat(@RequestParam("message") String message) {
-        return openAiChatClient.prompt(message).getContent();
+        return openAiChatClient.prompt(message).call().content();
     }
 
-    @GetMapping("/llama/chat")
-    public String llamaChat(@RequestParam("message") String message) {
-        return ollamaChatClient.prompt(message).getContent();
+    @GetMapping("/bedrock/chat")
+    public String bedrockChat(@RequestParam("message") String message) {
+        return bedrockChatClient.prompt(message).call().content();
     }
     ```
 
@@ -1026,7 +1102,7 @@ Create a controller to expose REST endpoints that utilize the different chat mod
     📌 **Example:**
 
     *   Send a request to `/api/openai/chat?message=What is your name and which model are you using?`
-    *   Send a similar request to `/api/llama/chat?message=What is your name and which model are you using?`
+    *   Send a similar request to `/api/bedrock/chat?message=What is your name and which model are you using?`
 
     Verify that each endpoint returns a response from the corresponding AI model.
 
