@@ -420,7 +420,11 @@ If you don't want to recharge $5, you have a couple of options:
 
 ### Testing Your Spring AI Application with Postman 🧪
 
-1.  Start your Spring AI application.
+1.  Start your Spring AI application. Go to the home directory of the project and run the application:
+    ```bash
+    mvn clean install
+    OPENAI_API_KEY=sk-xxxxxx mvn spring-boot:run
+    ```
 2.  Use Postman (or a similar tool) to send a GET request to your API endpoint.
 3.  Include a `message` query parameter with your prompt. 📌 **Example:**
 

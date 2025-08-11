@@ -78,6 +78,12 @@ To better understand message roles, consider a stage play:
 
 ⚠️ **Warning:** Not all LLM models support all message roles.
 
+| LLM Model | User Role | System Role | Assistant Role | Function Role |
+|-----------|-----------|-------------|----------------|---------------|
+| OpenAI    | ✅        | ✅          | ✅             | ✅            |
+| Anthropic | ✅        | ✅          | ✅             | ❌            |
+| Google Gemini | ✅        | ❌          | ✅             | ❌            |
+
 -   **OpenAI:** Supports all roles (user, system, assistant, and function).
 -   **Anthropic:** Supports user, system, and assistant roles, but not function.
 -   **Google Gemini:** Supports only user and assistant roles (the assistant role is sometimes called the "model" role).
@@ -94,9 +100,16 @@ This is all the theory for now. In the next lecture, we'll write some code to se
 
 This section explores how Spring AI handles different message roles when interacting with Language Models (LM). We'll cover how user and system messages are treated and how to leverage them effectively.
 
-I've created a project named "spring-ai" and uploaded it to GitHub for your reference. This project currently contains a simple "Hello World" logic, similar to what we've used previously.
+We'll create a project named [spring-ai](/sec02/spring-ai/). This project currently contains a simple "Hello World" logic, similar to what we've used previously.
 
 The `ChatController` creates a `ChatClient` bean using the `ChatClientBuilder` and injects it. The application then invokes the LM model using the `prompt` method, passing a user message. The OpenAI API key is configured in `application.properties`.
+
+Go to the home directory of the project and run the application:
+
+```bash
+mvn clean install
+OPENAI_API_KEY=sk-xxxxxx mvn spring-boot:run
+```
 
 ### Sending System and User Messages Separately 🗣️
 
@@ -139,7 +152,21 @@ If we examine the implementation classes of `AbstractMessage`, we find several k
 
 ### Overloaded Prompt Methods ⚙️
 
-The `ChatController` offers overloaded `prompt` methods. We've already seen the one that accepts a string, which creates a `UserMessage` behind the scenes. Let's explore the method that accepts a `Prompt` object.
+The `ChatClient` class offers overloaded `prompt` methods. 
+
+```java
+// Overloaded prompt methods
+ChatClientRequestSpec prompt();
+ChatClientRequestSpec prompt(String content);
+ChatClientRequestSpec prompt(Prompt prompt);
+```
+
+We've already seen the one that accepts a string, which creates a `UserMessage` behind the scenes. Let's explore the method that accepts a `Prompt` object.
+
+```java
+// Example of how the prompt method is invoked
+chatClient.prompt(new Prompt("Hello, how can I help you?"));
+```
 
 This method allows sending a list of `Message` objects and `ChatOptions`. We'll delve into `ChatOptions` later.
 
@@ -148,6 +175,50 @@ When creating a `Prompt` object, you can use various constructors:
 *   Passing a string creates a `UserMessage`.
 *   Passing a `Message` object or a list of `Message` objects allows specifying different message roles.
 
+```java
+
+public class Prompt implements ModelRequest<List<Message>> {
+
+    private final List<Message> messages;
+
+    @Nullable
+    private ChatOptions chatOptions;
+
+    public Prompt(String contents) {
+        this((Message)(new UserMessage(contents)));
+    }
+
+    public Prompt(Message message) {
+        this(Collections.singletonList(message));
+    }
+
+    public Prompt(List<Message> messages) {
+        this((List)messages, (ChatOptions)null);
+    }
+
+    public Prompt(Message... messages) {
+        this((List)Arrays.asList(messages), (ChatOptions)null);
+    }
+
+    public Prompt(String contents, @Nullable ChatOptions chatOptions) {
+        this((Message)(new UserMessage(contents)), chatOptions);
+    }
+
+    public Prompt(Message message, @Nullable ChatOptions chatOptions) {
+        this(Collections.singletonList(message), chatOptions);
+    }
+
+    public Prompt(List<Message> messages, @Nullable ChatOptions chatOptions) {
+        Assert.notNull(messages, "messages cannot be null");
+        Assert.noNullElements(messages, "messages cannot contain null elements");
+        this.messages = messages;
+        this.chatOptions = chatOptions;
+    }
+
+    // ...
+}
+```
+
 The framework checks the instance type of each message and assigns the appropriate role (e.g., `SystemMessage`, `UserMessage`, `ToolResponseMessage`).
 
 ### Using the ChatClient Fluent API 💻
@@ -155,19 +226,23 @@ The framework checks the instance type of each message and assigns the appropria
 Alternatively, you can use the `ChatClient` fluent API to send user and system messages separately.
 
 ```java
-// Example of using the fluent API
-ChatResponse response = chatClient.prompt(prompt ->
-                prompt.system("You are an internal HR assistant...")
-                      .user("How many leaves can I take?"));
+@GetMapping("/chat")
+public String chat(@RequestParam String message) {
+  return chatClient
+      .prompt()
+      .system("""
+          You are an internal HR assistant. Your role is to help employees with questions 
+          related to HR policies such as new policies, working hours, benefits, and 
+          code of conduct. If a user asks for help with anything outside of these topics, 
+          kindly inform them that you can only assist with queries related to HR policies.
+          """)
+      .user(message)
+      .call()
+      .content();
+}
 ```
 
 The `user()` method sends a user role message, while the `system()` method sends a system role message.
-
-📌 **Example:**
-
-```java
-prompt.system("You are an internal HR assistant. Your role is to help employees with questions related to HR policies such as new policies, working hours, benefits, and code of conduct. If a user asks for help with anything outside of these topics, kindly inform them that you can only assist with the queries related to air pulses.");
-```
 
 This allows you to provide instructions to the model on how to behave, restricting its responses to specific topics.
 
@@ -216,11 +291,24 @@ The `defaultSystem()` method allows you to set a system role message that will b
 📌 **Example:**
 
 ```java
-@Bean
-public ChatClient chatClient(ChatClientBuilder chatClientBuilder) {
-    return chatClientBuilder
-            .defaultSystem("You are an internal HR assistant. You can only help with HR policies.")
-            .build();
+public ChatController(ChatClient.Builder chatClientBuilder) {
+  this.chatClient = chatClientBuilder
+      .defaultSystem("""
+          You are an internal HR assistant. Your role is to help employees with questions 
+          related to HR policies such as new policies, working hours, benefits, and 
+          code of conduct. If a user asks for help with anything outside of these topics, 
+          kindly inform them that you can only assist with queries related to HR policies.
+          """)
+      .build();
+}
+
+@GetMapping("/chat")
+public String chat(@RequestParam String message) {
+  return chatClient
+      .prompt()
+      .user(message)
+      .call()
+      .content();
 }
 ```
 
@@ -234,11 +322,19 @@ You can override the default system message by explicitly setting a different sy
 
 ```java
 @GetMapping("/it-help")
-public String itHelp(String message) {
-    PromptTemplate promptTemplate = new PromptTemplate("...");
-    Prompt prompt = promptTemplate.create(Map.of("message", message,
-            "system", "You are an internal IT help desk assistant. Your role is to assist the employees with IT related issues, such as resetting the password, unlocking Locking accounts and answering questions related to IT policies. If a user requests help with anything outside of these responsibilities, respond politely and inform them that you are only able to assist with the IT support tasks within your defined scope."));
-    return chatClient.call(prompt).getResult().getOutput();
+public String itHelp(@RequestParam String message) {
+  return chatClient
+      .prompt()
+      .system("""
+          You are an internal IT help desk assistant. Your role is to assist employees 
+          with IT-related issues, such as resetting passwords, unlocking accounts, 
+          and answering questions related to IT policies. If a user requests help with 
+          anything outside of these responsibilities, respond politely and inform them 
+          that you are only able to assist with IT support tasks within your defined scope.
+          """)
+      .user(message)
+      .call()
+      .content();
 }
 ```
 
@@ -251,11 +347,25 @@ The `defaultUser()` method allows you to set a default user message that will be
 📌 **Example:**
 
 ```java
-@Bean
-public ChatClient chatClient(ChatClientBuilder chatClientBuilder) {
-    return chatClientBuilder
-            .defaultUser("How can you help me?")
-            .build();
+public ChatController(ChatClient.Builder chatClientBuilder) {
+  this.chatClient = chatClientBuilder
+      .defaultSystem("""
+          You are an internal HR assistant. Your role is to help employees with questions 
+          related to HR policies such as new policies, working hours, benefits, and 
+          code of conduct. If a user asks for help with anything outside of these topics, 
+          kindly inform them that you can only assist with queries related to HR policies.
+          """)
+      .defaultUser("How can you help me?")
+      .build();
+}
+
+@GetMapping("/chat")
+public String chat(@RequestParam String message) {
+  return chatClient
+      .prompt()
+      .user(message)
+      .call()
+      .content();
 }
 ```
 
@@ -277,12 +387,13 @@ To keep your controller clean, you can move the `ChatClient` bean creation logic
 @Configuration
 public class ChatClientConfig {
 
-    @Bean
-    public ChatClient chatClient(ChatClientBuilder chatClientBuilder) {
-        return chatClientBuilder
-                .defaultSystem("You are an internal HR assistant. You can only help with HR policies.")
-                .build();
-    }
+  @Bean
+  public ChatClient chatClient(ChatClient.Builder chatClientBuilder) {
+    return chatClientBuilder
+        .defaultSystem("You are an internal HR assistant. You can only help with HR policies. .... ")
+        .defaultUser("How can you help me?")
+        .build();
+  }
 }
 ```
 
@@ -353,9 +464,12 @@ While you can define prompt templates directly within your controller or busines
 3.  For dynamic placeholders, use a lambda expression with the `PromptTemplateSpec` and the `text()` and `param()` methods.
 
     ```java
-    chatClient.call(promptTemplate -> promptTemplate.user(userPromptTemplate)
-            .param("customerName", customerName)
-            .param("customerMessage", customerMessage));
+    chatClient.prompt()
+        .user(promptTemplateSpec -> promptTemplateSpec.text(userPromptTemplate)
+                .param("customerName", customerName)
+                .param("customerMessage", customerMessage))
+        .call()
+        .content();
     ```
 
 ### Demo: Email Response Generator
@@ -382,39 +496,56 @@ Let's create a REST API endpoint that helps customer support teams generate emai
     }
     ```
 
-5.  Define a system message to set the role of the LM (e.g., "You are a professional customer service assistant...").
+5.  Define a system message to set the role of the LM (e.g., "You are a professional customer service assistant which helps drafting email responses to improve the productivity of the customer support team").
 6.  Create a prompt template with placeholders for customer name and message.
 
     📌 **Example:**  `prompt-templates/email-prompt.st`
     ```
     A customer named ${customerName} sent the following message:
 
-    ${customerMessage}
+    "${customerMessage}"
 
     Write a polite and helpful email response addressing the issue.
     Maintain a professional tone and provide reassurance.
-    Respond as if you are writing the email body only.
-    Don't include subject and signature.
+
+    Respond as if you are writing the email body only. Don't include subject and signature.
     ```
 
 7.  Use the `@Value` annotation to inject the prompt template.
 8.  Invoke the `user()` method with a lambda expression to pass the template and parameters.
 
-    ```java
-    @Value("classpath:prompt-templates/email-prompt.st")
-    private Resource userPromptTemplate;
+```java
+@RestController
+@RequestMapping("/api")
+public class PromptTemplateController {
 
-    @GetMapping("/email")
-    public String emailResponse(@RequestParam String customerName, @RequestParam String customerMessage) {
-        Prompt prompt = new Prompt(message -> message.user(userPromptTemplate)
-                .param("customerName", customerName)
-                .param("customerMessage", customerMessage));
+  @Value("classpath:prompt-templates/email-prompt.st")
+  private Resource userPromptTemplate;
 
-        return chatClient.call(prompt).getResult().getOutput().getContent();
-    }
-    ```
+  private final ChatClient chatClient;
 
-9.  Test the API using Postman or a similar tool.
+  public PromptTemplateController(ChatClient chatClient) {
+    this.chatClient = chatClient;
+  }
+
+  @GetMapping("/email")
+  public String emailResponse(@RequestParam String customerName, @RequestParam String customerMessage) {
+    return chatClient
+        .prompt()
+        .system("""
+              You are a professional customer service assistant which helps drafting
+              email responses to improve the productivity of the customer support team
+            """)
+        .user(promptTemplateSpec -> promptTemplateSpec.text(userPromptTemplate)
+            .param("customerName", customerName)
+            .param("customerMessage", customerMessage))
+        .call()
+        .content();
+  }
+}
+```
+
+9.  Test the API using Postman or a similar tool. `curl --location 'http://localhost:8080/api/email?customerName=Rocco&customerMessage=I%20am%20not%20able%20to%20access%20my%20account%2C%20it%20says%20account%20locked.%20please%20help'`
 
 ### Addressing Common Questions
 
@@ -443,7 +574,7 @@ Consider scenarios where a company's policy document or data stored securely wit
 
 The reason for this limitation is that the LLM lacks sufficient knowledge about the specific subject or question being asked.
 
-These limitations can be addressed using various techniques, including prompt stuffing and Retrieval Augmented Generation (RAG). Let's focus on prompt stuffing and how it can be used in simple scenarios.
+These limitations can be addressed using various techniques, including **prompt stuffing** and **Retrieval Augmented Generation (RAG)**. Let's focus on prompt stuffing and how it can be used in simple scenarios.
 
 Prompt stuffing involves providing the LLM with an "open book" before it answers a question. 📚 This means giving the LLM enough context or data to answer a user's question accurately.
 
@@ -479,25 +610,30 @@ Let's look at a demo of prompt stuffing using a Spring Boot application.
         @GetMapping
         public String promptStuffing(@RequestParam String message) {
             // Implementation here
-            return "Response from LLM";
         }
     }
     ```
 
-6.  Create a new prompt template file named `SystemPromptTemplate.txt` in the `resources/PromptTemplates` folder.
+6.  Create a new prompt template file named `system-prompt-template.st` in the `resources/prompt-templates` folder.
 7.  Paste the system message into this file. This message sets the scope for the LLM, instructing it to act as an internal HR assistant and providing specific HR policy details.
 
-    📌 **Example:** `SystemPromptTemplate.txt` content:
+    📌 **Example:** [system-prompt-template.st](/sec02/spring-ai/src/main/resources/prompt-templates/system-prompt-template.st) content:
 
     ```text
-    You are an internal HR assistant. You assist employees with the queries related to HR policies only, such as new entitlements, working hours, benefits, and code of conduct.
+    You are an internal HR assistant. You assist employees with queries related to HR policies only — such as leave entitlements, working hours, benefits, and code of conduct.
 
-    HR Policy Details:
-    - 18 days of paid leave annually.
-    - Up to eight unused leaves can be carried over to the next year.
-    - Standard working hours are 9 AM to 5 PM.
-    - Notice period is 30 days.
-    - Paternity leave details: ...
+    HR Policy Summary:
+    • 18 days of paid leave annually
+    • Up to 8 unused leave days can be carried over to the next year
+    • Standard working hours: 9 AM to 6 PM, Monday to Friday
+    • Notice period - 30 days
+    • Maternity leaves - 6 months
+    • Paternity leaves - 2 weeks
+    • National holidays are company-wide off days
+    • Benefits include health insurance, provident fund, and annual health checkup
+    • Employees must adhere to professional behavior, punctuality, and data confidentiality
+
+    Politely inform users that you can only help with HR policy-related topics if they ask something outside your scope.
     ```
 
     If a user asks a question outside the HR policy scope, the LLM will respond with "I can't perform that job. I'm only an HR assistant."
@@ -508,34 +644,36 @@ Let's look at a demo of prompt stuffing using a Spring Boot application.
 9.  Pass the `SystemPromptTemplate` as an input to the system method.
 10. Pass the user's message directly as the user input.
 
-    ```java
-    @RestController
-    @RequestMapping("/prompt-stuffing")
-    public class PromptStuffingController {
+```java
+@RestController
+@RequestMapping("/api")
+public class PromptStuffingController {
 
-        @Value("classpath:PromptTemplates/SystemPromptTemplate.txt")
-        private Resource systemPromptTemplate;
+  @Value("classpath:prompt-templates/system-prompt-template.st")
+  private Resource systemPromptTemplate;
 
-        @Autowired
-        private ChatClient chatClient;
+  private final ChatClient chatClient;
 
-        @GetMapping
-        public String promptStuffing(@RequestParam String message) throws IOException {
-            String systemMessage = new String(Files.readAllBytes(Paths.get(systemPromptTemplate.getURI())));
+  public PromptStuffingController(ChatClient chatClient) {
+    this.chatClient = chatClient;
+  }
 
-            ChatMessage systemChatMessage = new ChatMessage(systemMessage, ChatMessage.Role.SYSTEM);
-            ChatMessage userChatMessage = new ChatMessage(message, ChatMessage.Role.USER);
-
-            ChatResponse response = chatClient.call(List.of(systemChatMessage, userChatMessage));
-            return response.getResult().getOutput();
-        }
-    }
-    ```
+  @GetMapping("/prompt-stuffing")
+  public String promptStuffing(@RequestParam String message) {
+    return chatClient
+        .prompt()
+        .system(systemPromptTemplate)
+        .user(message)
+        .call()
+        .content();
+  }
+}
+```
 
 11. Build the application.
-12. Use Postman to invoke the `/prompt-stuffing` API with a message like "I used five leave days this year. How many will be forwarded to next year?".
+12. Use Postman to invoke the `/prompt-stuffing` API with a message like "I used five leave days this year. How many will be forwarded to next year?". (`curl --location 'http://localhost:8080/api/prompt-stuffing?message=I%20used%205%20leaves%20in%20this%20year.%20How%20many%20will%20be%20forwarded%20to%20next%20year'`)
 
-The LLM should provide an accurate response based on the HR policy details provided in the `SystemPromptTemplate.txt` file.
+The LLM should provide an accurate response based on the HR policy details provided in the `system-prompt-template.st` file.
 
 If you comment out the system-related logic and invoke the API again, the LLM will provide a generic response because it lacks the necessary contextual data.
 
@@ -567,13 +705,13 @@ Using LLMs from providers like OpenAI, AWS, Google Gemini, or Azure AI Services 
 
 Let's delve into what **tokens** are:
 
-*   Visit platform.openai.com/tokenizer to experiment with tokenization.
+*   Visit [platform.openai.com/tokenizer](https://platform.openai.com/tokenizer) to experiment with tokenization.
 *   LLMs don't understand human languages directly; they work with numbers.
 *   **Tokenization** converts human language into numerical representations.
     *   📌 **Example:** The phrase "What is the capital of India?" is converted into seven tokens.
     *   📌 **Example:** The phrase "Raining is nice. What do you think of it?" is converted into twelve tokens.
 *   Each **token** is associated with a **token ID**.
-*   💡 **Tip:** A helpful rule of thumb is that one token generally corresponds to four characters of text, or roughly 3/4 of a word.  Therefore, 100 tokens is approximately 75 words.
+*   💡 **Tip:** A helpful rule of thumb is that **one token generally corresponds to four characters of text, or roughly 3/4 of a word.  Therefore, 100 tokens is approximately 75 words.**
 
 ```
 # Example of tokenization
@@ -652,16 +790,18 @@ You can configure advisors in two ways:
 
 ```java
 ChatClient chatClient = ChatClientBuilder.builder()
-    .baseUrl("your_llm_url")
-    .apiKey("your_api_key")
-    .defaultAdvisor(new MyCustomAdvisor())
+    .defaultAdvisor(new SimpleLoggerAdvisor())
     .build();
 ```
 
 📌 **Example:** Configuring an advisor for a specific request:
 
 ```java
-ChatResponse response = chatClient.call(prompt, advisors -> advisors.add(new AnotherCustomAdvisor()));
+ChatResponse response = chatClient
+.prompt()
+.advisors(new SimpleLoggerAdvisor())
+.user(message)
+.call().content();
 ```
 
 To implement custom advisors, you need to implement interfaces like `CallAdvisor` and `StreamAdvisor`.
@@ -676,17 +816,40 @@ We will explore these advisors in more detail and start implementing them in our
 
 Let's explore how to configure advisors using the default advisor method available on the `ChatClientBuilder` object.
 
+```java
+@Bean
+public ChatClient chatClient(ChatClient.Builder chatClientBuilder) {
+    return chatClientBuilder
+            .defaultAdvisors(new SimpleLoggerAdvisor())
+            .defaultSystem("""
+                You are an internal HR assistant. ...
+                """)
+            .defaultUser("How can you help me?")
+            .build();
+}
+```
+
 When you type `defaultAdvisors`, you'll find three overloaded methods:
 
-*   Configure a single advisor.
-*   Configure a list of advisors.
-*   Use a Lambda expression of the `Consumer` Functional interface.
+*   `Builder defaultAdvisors(Advisor... advisor);` - Configure multiple advisors using varargs.
+*   `Builder defaultAdvisors(List<Advisor> advisors);` - Configure a list of advisors.
+*   `Builder defaultAdvisors(Consumer<AdvisorSpec> advisorSpecConsumer);` - Use a Lambda expression with `Consumer` to configure advisors dynamically.
+
+### SimpleLoggerAdvisor
 
 For this example, we'll use the first method to configure a single advisor: the `SimpleLoggerAdvisor`.
 
 This advisor is included in the framework. Let's take a look at the class.
 
 The documentation for `SimpleLoggerAdvisor` states that it logs request and response messages.
+
+```java
+/**
+ * A simple logger advisor that logs the request and response messages.
+ */
+public class SimpleLoggerAdvisor implements CallAdvisor, StreamAdvisor {
+}
+```
 
 As a reminder, when implementing your own advisor, ensure you implement the `CallAdvisor` and `StreamAdvisor` interfaces.
 
@@ -703,23 +866,42 @@ Scrolling down, you'll find the `adviceCall` method.
 
 Inside `adviceCall`, the request is logged using the `logRequest` method. After logging, the request is forwarded to the next advisor in the chain. If no more advisors exist, the request is sent to the LLM.
 
+```java
+private static final Logger logger = LoggerFactory.getLogger(SimpleLoggerAdvisor.class);
+
+@Override
+public ChatClientResponse adviseCall(ChatClientRequest chatClientRequest, CallAdvisorChain callAdvisorChain) {
+    logRequest(chatClientRequest);
+
+    ChatClientResponse chatClientResponse = callAdvisorChain.nextCall(chatClientRequest);
+
+    logResponse(chatClientResponse);
+
+    return chatClientResponse;
+}
+
+private void logRequest(ChatClientRequest request) {
+    logger.debug("request: {}", this.requestToString.apply(request));
+}
+
+private void logResponse(ChatClientResponse chatClientResponse) {
+    logger.debug("response: {}", this.responseToString.apply(chatClientResponse.chatResponse()));
+}
+```
+
 Once the LLM responds, the response is logged using the `logResponse` method.
 
 Let's look at the `logRequest` method.
 
 The request is logged using `logger.debug`. The response is logged similarly.
 
-Since debug logging is disabled by default, we need to enable it for this class to ensure the advisor works correctly. We'll do that shortly.
+Since **debug logging is disabled by default**, we need to enable it for this class to ensure the advisor works correctly. We'll do that shortly.
 
 Before that, let's discuss other methods available in the advisor.
-
-Every advisor has a name. If you don't provide one, the name is derived from the class name itself.
-
-Each advisor also has an order. The `SimpleLoggerAdvisor` has a default order of zero when using the plain constructor.
-
-You can set a different order by using the constructor that accepts an order number.
-
-The higher the order number, the higher the preference the advisor gets, meaning it will be executed earlier. If multiple advisors have the same order, the execution order is not guaranteed.
+* Every advisor has a name. If you don't provide one, the name is derived from the class name itself.
+* Each advisor also has an order. The `SimpleLoggerAdvisor` has a default order of zero when using the plain constructor.
+* You can set a different order by using the constructor that accepts an order number.
+* The higher the order number, the higher the preference the advisor gets, meaning it will be executed earlier. If multiple advisors have the same order, the execution order is not guaranteed.
 
 ⚠️ **Warning:** Always handle the order carefully if the execution order matters for your application.
 
@@ -735,19 +917,45 @@ Hopefully, this clarifies the purpose of the `SimpleLoggerAdvisor`.
 
 Let's examine the `CallAdvisor` interface. If we look at its implementation classes, we'll see the built-in advisors provided by the Spring framework, including those related to chat model, message chart, and prompt chart. We'll explore these in future lectures.
 
+### SafeguardAdvisor
+
 For now, we understand the purpose of `SimpleLoggerAdvisor`. Let's also look at `SafeguardAdvisor`.
 
 Reading the documentation, we see that `SafeguardAdvisor` blocks calls to the model provider if the user input contains sensitive words.
 
-When creating an instance of this advisor, you need to provide a list of sensitive words. If the user's request contains any of these words, the advisor will prevent the request from reaching the LLM.
+```java
+/**
+ * An advisor that blocks the call to the model provider if the user input contains any of
+ * the sensitive words.
+ */
+public class SafeGuardAdvisor implements CallAdvisor, StreamAdvisor {
 
-Instead, it will generate a failure response of type `AssistantMessage`.
+    private static final String DEFAULT_FAILURE_RESPONSE = "I'm unable to respond to that due to sensitive content. Could we rephrase or discuss something else?";
 
-The default failure response content is: "I'm unable to respond to that due to sensitive content. Could we rephrase or discuss something else?"
+	private static final int DEFAULT_ORDER = 0;
+	private final String failureResponse;
+	private final List<String> sensitiveWords;
+	private final int order;
 
-These types of advisors are essential in enterprise environments.
+	public SafeGuardAdvisor(List<String> sensitiveWords) {
+		this(sensitiveWords, DEFAULT_FAILURE_RESPONSE, DEFAULT_ORDER);
+	}
 
-As Spring AI evolves, more advisors will be introduced. Feel free to explore and use them based on your specific needs.
+	public SafeGuardAdvisor(List<String> sensitiveWords, String failureResponse, int order) {
+		Assert.notNull(sensitiveWords, "Sensitive words must not be null!");
+		Assert.notNull(failureResponse, "Failure response must not be null!");
+		this.sensitiveWords = sensitiveWords;
+		this.failureResponse = failureResponse;
+		this.order = order;
+	}
+}
+```
+
+When creating an instance of this advisor, you need to provide a list of sensitive words. If the user's request contains any of these words, the advisor will prevent the request from reaching the LLM. Instead, it will generate a failure response of type `AssistantMessage`.
+
+The default failure response content is: "I'm unable to respond to that due to sensitive content. Could we rephrase or discuss something else?" These types of advisors are essential in enterprise environments. As Spring AI evolves, more advisors will be introduced. Feel free to explore and use them based on your specific needs.
+
+### SimpleLoggerAdvisor Demo
 
 Let's return to the chat client configuration.
 
@@ -758,42 +966,114 @@ Let's go to `application.properties`.
 We'll add the following property:
 
 ```properties
-logging.level.org.springframework.ai.chat.client.advisor=debug
+logging.level.org.springframework.ai.chat.client.advisor=DEBUG
 ```
 
 This enables debug logging for the package containing `SimpleLoggerAdvisor`.
 
-Save the file and rebuild the project.
+Save the file and rebuild the project. Once the build is complete, everything sent to and received from the LLM should be logged in the console.
 
-Once the build is complete, everything sent to and received from the LLM should be logged in the console.
+We'll send the message "how to reset my password". This time, if we check the logs, we'll see complete details about the request and response from the OpenAI model.
 
-Let's clean the console and invoke an API, such as the chat API.
+First, let's examine the request content. We're sending a system message stating "You are an internal IT help desk assistant." This system role message was set using the `defaultSystem` and `system` methods.
 
-We'll send the message "how to reset my password".
+```log
+21:53:18.282 DEBUG [http-nio-8080-exec-5] o.s.a.c.c.a.SimpleLoggerAdvisor - request: ChatClientRequest[prompt=Prompt{messages=[SystemMessage{textContent='You are an internal IT help desk assistant. Your role is to assist employees
+with IT-related issues, such as resetting passwords, unlocking accounts,
+and answering questions related to IT policies. If a user requests help with
+anything outside of these responsibilities, respond politely and inform them
+that you are only able to assist with IT support tasks within your defined scope.
+', messageType=SYSTEM, metadata={messageType=SYSTEM}}, UserMessage{content='how to reset my password?', properties={messageType=USER}, messageType=USER}], modelOptions=OpenAiChatOptions: {"streamUsage":false,"model":"gpt-4o-mini","temperature":0.7}}, context={}]
+```
 
-This time, if we check the logs, we'll see complete details about the request and response from the OpenAI model.
+Under the user message, we have our question: "how to reset my password". The message type is "user". We also see the default model being used by Spring AI, the temperature, context, and that stream usage is false. In future lectures, I'll show you how to change these default chat options, including the model type and temperature.
 
-First, let's examine the request content.
+Now, let's look at the response. The message type is "assistant", as expected. The ID is specific to OpenAI and is included in the response.
 
-We're sending a system message stating "You are an internal IT help desk assistant." This system role message was set using the `defaultSystem` and `system` methods.
+```log
+21:53:22.158 DEBUG [http-nio-8080-exec-5] o.s.a.c.c.a.SimpleLoggerAdvisor - response: {
+  "result" : {
+    "metadata" : {
+      "finishReason" : "STOP",
+      "contentFilters" : [ ],
+      "empty" : true
+    },
+    "output" : {
+      "messageType" : "ASSISTANT",
+      "metadata" : {
+        "role" : "ASSISTANT",
+        "messageType" : "ASSISTANT",
+        "finishReason" : "STOP",
+        "refusal" : "",
+        "index" : 0,
+        "annotations" : [ ],
+        "id" : "chatcmpl-C3PapCuY7WBFCt8Q4LjCUo16xmqjP"
+      },
+      "toolCalls" : [ ],
+      "media" : [ ],
+      "text" : "To reset your password, please follow these steps:\n\n1. Go to the login page of the system you are trying to access.\n2. Click on the \"Forgot Password?\" link.\n3. Follow the prompts to enter your email address or username associated with your account.\n4. Check your email for a password reset link and follow the instructions provided.\n\nIf you encounter any issues during this process, please let me know, and I’ll be happy to assist you further!"
+    }
+  },
+  "metadata" : {
+    "id" : "chatcmpl-C3PapCuY7WBFCt8Q4LjCUo16xmqjP",
+    "model" : "gpt-4o-mini-2024-07-18",
+    "rateLimit" : {
+      "requestsLimit" : 200,
+      "requestsRemaining" : 198,
+      "requestsReset" : 1221.000000000,
+      "tokensLimit" : 100000,
+      "tokensRemaining" : 99758,
+      "tokensReset" : 6256.000000000
+    },
+    "usage" : {
+      "promptTokens" : 89,
+      "completionTokens" : 94,
+      "totalTokens" : 183,
+      "nativeUsage" : {
+        "completion_tokens" : 94,
+        "prompt_tokens" : 89,
+        "total_tokens" : 183,
+        "prompt_tokens_details" : {
+          "audio_tokens" : 0,
+          "cached_tokens" : 0
+        },
+        "completion_tokens_details" : {
+          "reasoning_tokens" : 0,
+          "accepted_prediction_tokens" : 0,
+          "audio_tokens" : 0,
+          "rejected_prediction_tokens" : 0
+        }
+      }
+    },
+    "promptMetadata" : [ ],
+    "empty" : false
+  },
+  "results" : [ {
+    "metadata" : {
+      "finishReason" : "STOP",
+      "contentFilters" : [ ],
+      "empty" : true
+    },
+    "output" : {
+      "messageType" : "ASSISTANT",
+      "metadata" : {
+        "role" : "ASSISTANT",
+        "messageType" : "ASSISTANT",
+        "finishReason" : "STOP",
+        "refusal" : "",
+        "index" : 0,
+        "annotations" : [ ],
+        "id" : "chatcmpl-C3PapCuY7WBFCt8Q4LjCUo16xmqjP"
+      },
+      "toolCalls" : [ ],
+      "media" : [ ],
+      "text" : "To reset your password, please follow these steps:\n\n1. Go to the login page of the system you are trying to access.\n2. Click on the \"Forgot Password?\" link.\n3. Follow the prompts to enter your email address or username associated with your account.\n4. Check your email for a password reset link and follow the instructions provided.\n\nIf you encounter any issues during this process, please let me know, and I’ll be happy to assist you further!"
+    }
+  } ]
+}
+```
 
-Under the user message, we have our question: "how to reset my password". The message type is "user".
-
-We also see the default model being used by Spring AI, the temperature, context, and that stream usage is false.
-
-In future lectures, I'll show you how to change these default chat options, including the model type and temperature.
-
-Now, let's look at the response.
-
-The message type is "assistant", as expected.
-
-The ID is specific to OpenAI and is included in the response.
-
-Scrolling down, the response itself is under the "tags".
-
-This is the same response we saw in Postman. We also have other metadata information.
-
-As you can see, advisors are powerful. They allow us to easily implement cross-cutting concerns and housekeeping activities.
+Scrolling down, the response itself is under the "tags". This is the same response we saw in Postman. We also have other metadata information. As you can see, advisors are powerful. They allow us to easily implement cross-cutting concerns and housekeeping activities.
 
 Currently, we've configured the advisor using `defaultAdvisors`. If you don't want to apply an advisor to all REST APIs using a `ChatClient` bean, you can configure it within your REST APIs.
 
@@ -865,9 +1145,8 @@ Here's how to create the advisor:
 6.  Inside the `adviceCall` method, send the request to the LLM model.
 
     ```java
-    @Override
-    public ClientResponse adviceCall(ClientRequest request, ChatClient.CallFunction callFunction) {
-        ClientResponse response = callFunction.apply(request);
+    public ChatClientResponse adviseCall(ChatClientRequest chatClientRequest, CallAdvisorChain callAdvisorChain) {
+        ChatClientResponse clientResponse = callAdvisorChain.nextCall(chatClientRequest);
         // Further logic here
         return response;
     }
@@ -876,16 +1155,21 @@ Here's how to create the advisor:
 7.  Get the chat response and assign it to a `ChatResponse` object.  Make sure to return the `ClientResponse` so that the next advisor can receive it.
 
     ```java
-    ChatResponse chatResponse = response.getChatResponse();
+    ChatResponse chatResponse = clientResponse.chatResponse();
+    // logic
+    return clientResponse;
     ```
 
 8.  Retrieve token details from the `ChatResponse` object's metadata.  This part is specific to OpenAI. ⚠️ **Warning:** If you're using a different LLM vendor, you'll need to research how they provide token details. If you're using a locally deployed LLM, there might not be a token concept.
 
     ```java
-    if (chatResponse.getMetadata() != null) {
-        Usage usage = (Usage) chatResponse.getMetadata().get("usage");
-        if (usage != null) {
-            logger.info("Token usage details: " + usage.toString());
+    if(chatResponse != null && chatResponse.getMetadata() != null) {
+        Usage usage = chatResponse.getMetadata().getUsage();
+        if(usage != null) {
+            logger.info("Prompt tokens: {}", usage.getPromptTokens());
+            logger.info("Completion tokens: {}", usage.getCompletionTokens());
+            logger.info("Total Token usage: {}", usage.getTotalTokens());
+            logger.info("Token usage details: {}", usage.toString());
         }
     }
     ```
@@ -920,8 +1204,12 @@ There are two ways to configure the advisor:
         private ChatClient chatClient;
 
         @GetMapping("/chat")
-        public String chat() {
-            return chatClient.call("Tell me a joke", List.of(new TokenUsageAuditAdvisor()));
+        public String chat(@RequestParam String message) {
+            return chatClient
+                .prompt()
+                .advisors(new TokenUsageAuditAdvisor())
+                .user(message)
+                .call().content();
         }
     }
     ```
@@ -934,14 +1222,19 @@ There are two ways to configure the advisor:
 
         @Bean
         public ChatClient chatClient() {
-            return new DefaultChatClientBuilder()
-                    .withDefaultAdvisors(List.of(new SimpleLoggerAdvisor(), new TokenUsageAuditAdvisor()))
-                    .build();
+            return chatClientBuilder
+                .defaultAdvisors(new SimpleLoggerAdvisor())
+                .defaultAdvisors(new TokenUsageAuditAdvisor())
+                .defaultSystem("""
+                        You are an internal HR assistant. ...
+                        """)
+                .defaultUser("How can you help me?")
+                .build();
         }
     }
     ```
 
-    You can pass a list of advisor objects using `List.of()`.
+    You can also pass a list of advisor objects using `List.of(new SimpleLoggerAdvisor(), new TokenUsageAuditAdvisor())`.
 
 ### Testing the Advisor
 
@@ -960,27 +1253,40 @@ You've now learned how to build a custom advisor and configure it.  💡 **Tip:*
 
 In enterprise applications integrating web applications with Large Language Models (LLMs), developers often require flexibility in model selection and parameter tuning. Spring AI provides **chat options** to customize LLM behavior during chat or completion calls. Think of chat options as a tuning panel for your AI model, allowing you to set limits, adjust creativity, control response length, and more. ⚙️
 
+**Key Chat Options**
+
+| Option            | Meaning                                                                                   |
+|-------------------|-------------------------------------------------------------------------------------------|
+| model             | Which LLM model to use (e.g., gpt-4, gpt-3.5-turbo, etc.)                                 |
+| frequencyPenalty  | Reduces repetition. Higher = less repetition                                              |
+| presencePenalty   | Encourages mentioning new topics                                                          |
+| temperature       | Controls creativity. 0 = focused, 1 = random                                              |
+| topP              | Controls randomness (nucleus sampling)                                                    |
+| stopSequences     | Stop generating when specific phrases are found                                           |
+| maxTokens         | Maximum number of tokens (words/chars) in the reply                                        |
+| topK              | Controls how many top choices are considered                                              |
+
 Here's a breakdown of important parameters:
 
-### Model Selection 🧠
+### Model Selection (`model`) 🧠
 
 *   Every provider (e.g., OpenAI) offers multiple models optimized for different tasks.
 *   Some models excel at reasoning and text generation, while others are better suited for image or video generation.
 *   You can select a specific model based on your use case, overriding the framework's default selection.
 
-### Frequency Penalty 📉
+### Frequency Penalty (`frequencyPenalty`) 📉
 
 *   Configurable value between 0.0 and 2.0.
 *   Higher values reduce repetition in the LLM's responses.
 *   📌 **Example:** In a cat story, a lower frequency penalty might lead to repetitive phrases like "the cat is sleeping, the cat is walking, the cat is playing."
-*   💡 **Tip:** Find a sweet spot. Start with the default Spring configuration and adjust as needed.
+*   💡 **Tip:** Find a sweet spot. **Start with the default Spring configuration and adjust as needed.**
 
-### Presence Penalty ➕
+### Presence Penalty (`presencePenalty`) ➕
 
 *   Also accepts values between 0.0 and 2.0.
 *   Higher values encourage the LLM to use new words and concepts.
 
-### Temperature 🔥
+### Temperature (`temperature`) 🔥
 
 *   Controls the creativity of the LLM.
 *   Value ranges from 0 to 1.
@@ -988,26 +1294,26 @@ Here's a breakdown of important parameters:
 *   Higher values (e.g., 0.7 or 0.8) introduce more randomness and creativity.
 *   💡 **Tip:**  Experiment with higher values to avoid responses that feel too robotic.
 
-### Top P ⚖️
+### Top P (`topP`) ⚖️
 
 *   An alternative to temperature for controlling randomness.
 *   Assign a value (e.g., 0.8, 0.5, 0.1) to control the probability threshold for word selection.
 *   The LLM considers only words with a probability above the set threshold.
-*   Avoid using both temperature and top P together, as they serve the same purpose.
+*   **Avoid using both temperature and top P together, as they serve the same purpose.**
 
-### Top K 💯
+### Top K (`topK`) 💯
 
 *   Specify the number of top potential words the LLM should consider.
 *   A higher number introduces more randomness.
 *   📌 **Example:** Setting top K to 50 means the LLM will choose from the top 50 most likely words.
 
-### Stop Sequence 🛑
+### Stop Sequence (`stopSequences`) 🛑
 
 *   Define a sequence or word that, when generated, will halt the LLM's response.
 *   Useful for preventing overly verbose responses.
 *   📌 **Example:** When generating JSON, use `"]}"` as a stop sequence to prevent explanations after the JSON output.
 
-### Max Tokens 🎫
+### Max Tokens (`maxTokens`) 🎫
 
 *   Limits the maximum number of tokens the LLM can use in its response.
 *   Helps control the length and cost of responses.
@@ -1029,19 +1335,25 @@ Spring provides multiple ways to configure chat options:
         .model("gpt-4")
         .temperature(0.7)
         .maxTokens(100)
+        .presencePenalty(0.6)
+        .stopSequence(List.of("END"))
         .build();
     ```
 
 2.  **Default Options:**
 
     *   Apply options globally to all chat client bean usages using `defaultOptions()` on the `ChatClientBuilder`.
+    
+    ```java
+    chatClientBuilder.defaultOptions(options).build();
+    ```
 
-3.  **Request-Specific Options:**
+1.  **Request-Specific Options:**
 
     *   Apply options to specific API calls using the `options()` method just before invoking the LLM through the chat client bean.
 
     ```java
-    chatClient.call(prompt, options);
+    chatClient.prompt().options(options).user(message).call().content();
     ```
 
 📝 **Note:** `ChatOptions` is a generic interface applicable across different LLM providers.
@@ -1064,17 +1376,30 @@ This section covers how to configure chart options in Spring AI, including setti
 
 You can set default chart options that apply to all REST APIs. This is done using the `ChatClient` builder object.
 
-1.  Create a `ChartOptions` object using the builder pattern:
+1.  Create a `ChatOptions` object using the builder pattern:
 
     ```java
-    ChartOptions chartOptions = ChartOptions.builder()
+    ChatOptions chatOptions = ChatOptions.builder()
         .model("gpt-4.1-mini")
         .maxTokens(100)
         .temperature(0.8)
         .build();
     ```
 
-2.  Pass the `ChartOptions` object to the `defaultOptions` method of the `ChatClient` builder.
+2.  Pass the `ChatOptions` object to the `defaultOptions` method of the `ChatClient` builder.
+
+    ```java
+    ChatOptions chatOptions = ChatOptions.builder().model("gpt-4.1-mini").maxTokens(100).temperature(0.8).build();
+
+    return chatClientBuilder
+        .defaultOptions(chatOptions)
+        .defaultAdvisors(List.of(new SimpleLoggerAdvisor(), new TokenUsageAuditAdvisor()))
+        .defaultSystem("""
+                You are an internal HR assistant. ...
+                """)
+        .defaultUser("How can you help me?")
+        .build();
+    ```
 
     📝 **Note:** It's generally recommended to stick with the default values provided by the Spring AI framework unless you have specific requirements.
 
@@ -1100,24 +1425,28 @@ You can set default chart options that apply to all REST APIs. This is done usin
 
 You can override the default chart options for specific REST APIs using the `options` method.
 
-1.  Create a `ChartOptions` object, for example, using the `OpenAIChatOptions` class.
-
-    ```java
-    OpenAIChatOptions chartOptions = OpenAIChatOptions.builder()
-        .model(ChatModel.GPT_4_0_LATEST)
-        .frequencyPenalty(0.5)
-        // Add other OpenAI-specific options as needed
-        .build();
-    ```
+1.  Create a `ChatOptions` object, for example, using the `OpenAIChatOptions` class.
 
     📝 **Note:** OpenAI offers a wide range of options, including web search, user HTTP headers, logit bias, and more. Refer to the OpenAI documentation for details on each option.
 
-2.  Pass the `ChartOptions` object to the `options` method in your REST API controller.
+2.  Pass the `ChatOptions` object to the `options` method in your REST API controller.
 
     ```java
     @GetMapping("/promptstuffing")
     public String promptStuffing() {
-        return chatClient.call(prompt, OpenAIChatOptions.builder().model(ChatModel.GPT_4_0_LATEST).build());
+        return chatClient
+                .prompt()
+                .options(
+                    OpenAiChatOptions.builder()
+                    .frequencyPenalty(0.5).presencePenalty(0.5)
+                    .maxTokens(10)
+                    .build()
+                )
+                .system("""
+                    You are an internal IT help desk assistant..
+                    """)
+                .user(message)
+                .call().content();
     }
     ```
 
@@ -1154,7 +1483,17 @@ Spring AI also allows you to configure chart options using properties in the `ap
 
 ## 12. Exploring Different Response Handling Methods in Spring AI
 
-In our previous REST API implementations using Spring AI, we've primarily used the `content()` method to extract the assistant's message content as a string. This is convenient for simple UI display or sending responses to client applications. However, Spring AI offers other powerful methods for handling responses, providing access to richer information. Let's explore these alternatives.
+In our previous REST API implementations using Spring AI, we've primarily used the `content()` method to extract the assistant's message content as a string. 
+
+```java
+return chatClient
+    .prompt()
+    .user(message)
+    .call()
+    .content();
+```
+
+This is convenient for simple UI display or sending responses to client applications. However, Spring AI offers other powerful methods for handling responses, providing access to richer information. Let's explore these alternatives.
 
 ### Beyond `content()`: Other Response Methods
 
@@ -1210,6 +1549,15 @@ As you can see, accessing the desired information requires navigating through se
 *   Use `chatResponse()` when you need metadata information, such as token usage or model details.
 *   Use `chatClientResponse()` when you also need access to the context information.
 
+| Method                  | What It Returns                          | Use Case                                      |
+|-------------------------|------------------------------------------|-----------------------------------------------|
+| content()               | Just the response as a String            | Simple use case – display or print reply      |
+| chatResponse()          | A ChatResponse object                     | Get full details like token usage             |
+| chatClientResponse()    | A ChatClientResponse object               | Useful in RAG – includes context & metadata   |
+| entity(...) methods     | Converts response to POJOs                | Getting Java Objects (Structured Output)      |
+
+As you can see, each method provides a different level of detail and flexibility in handling the response. Choose the one that fits your needs and requirements.
+
 ### Streaming Responses
 
 Just like the `call()` method, there's also a `stream()` method.
@@ -1223,21 +1571,19 @@ We'll explore the `stream()` method with a demo in the next lecture.
 
 ## 13. Creating a Stream Controller
 
-Let's create a new controller class named `StreamController` and define a REST API within it.
-
-First, copy the necessary annotations and constructor dependency injection from an existing controller (e.g., `ChatController`). Then, copy a simple REST API as a starting point.
+Let's copy the existing `ChatController` and give it a new controller class named `StreamController`.
 
 Rename the API endpoint to `/stream` followed by the method name. This method will receive a request parameter named `message`.
 
 ```java
 @RestController
-@RequestMapping("/stream")
+@RequestMapping("/api")
 public class StreamController {
 
     // ... (Dependency Injection)
 
-    @GetMapping("/methodName")
-    public Flux<String> streamMethod(@RequestParam String message) {
+    @GetMapping("/stream")
+    public Flux<String> stream(@RequestParam String message) {
         // ... (Implementation)
     }
 }
@@ -1266,6 +1612,8 @@ If you're new to `Flux`, it might seem complex initially. A demo will illustrate
 Perform a build of your application.
 
 After the build is complete, invoke the REST API from a browser. ⚠️ **Warning:** Avoid using Postman, as it doesn't fully support response streaming.
+
+`http://localhost:8080/api/stream?message=describe%20the%20company%20work%20policy%20in%20depth%20regarding%20the%20working%20hours`
 
 📌 **Example:**
 
@@ -1302,7 +1650,7 @@ The converter classes act as helper classes that perform two key functions when 
 
 ### Demo with Google Gemini
 
-To demonstrate structured output, Google AI Studio is recommended. ⚠️ **Warning:** At the time of this recording, other popular applications like ChatGPT may not fully support structured output in their UI.
+To demonstrate structured output, Google AI Studio is recommended. ⚠️ **Warning:** As of 11 Aug 2025, other popular applications like ChatGPT may not fully support structured output in their UI.
 
 1.  Navigate to the Google AI Studio website.
 2.  Ensure that the "Chat" option is selected.
@@ -1317,6 +1665,9 @@ To demonstrate structured output, Google AI Studio is recommended. ⚠️ **Warn
     *   Inside the "response" object, add nested properties:
         *   "country" of type "string."
         *   "cities" of type "array of string."  Make sure to select the array option for the cities property.
+
+![Structured Output Converter Configuration](img/Structured_Output_Converter_Configuration.png)
+
 7.  Save the structure.
 8.  Re-enter the prompt and run the query.
 
@@ -1405,31 +1756,19 @@ To ensure flexibility, create a new `ChatClient` bean specifically for this cont
 
 1.  In the `ChatClientConfig` (or a similar configuration class), copy the existing `ChatClient` bean configuration.
 2.  Paste the configuration into the `StructuredOutputController`.
-3.  Use the `ChatClientBuilder` to create a new `ChatClient` bean.
+3.  Use the `ChatClient.Builder` to create a new `ChatClient` bean.
 
 ```java
-import org.springframework.ai.client.ChatClient;
-import org.springframework.ai.client.ChatClient.ChatClientBuilder;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+@RestController
+@RequestMapping("/api")
+public class StructuredOutputController {
 
-@Configuration
-public class ChatClientConfig {
+    private final ChatClient chatClient;
 
-    @Bean
-    public ChatClient chatClient() {
-        // Existing ChatClient configuration
+    public StructuredOutputController(ChatClient.Builder chatClientBuilder) {
+        this.chatClient = chatClientBuilder.build();
     }
 }
-```
-
-```java
-    @Bean
-    public ChatClient structuredOutputChatClient() {
-        ChatClientBuilder chatClientBuilder = new ChatClientBuilder();
-        // Configure the builder (e.g., with API key, model, etc.)
-        return chatClientBuilder.build();
-    }
 ```
 
 ### Creating the REST API
@@ -1470,19 +1809,39 @@ To understand how Spring AI formats the request for the LM, configure a logger a
 3.  Invoke the `build` method to create the `ChatClient` bean.
 
 ```java
-import org.springframework.ai.autoconfigure.vectorstore.SimpleVectorStoreProperties.SimpleLoggerAdvisor;
-import org.springframework.ai.client.ChatClient.ChatClientBuilder;
-
-    @Bean
-    public ChatClient structuredOutputChatClient() {
-        ChatClientBuilder chatClientBuilder = new ChatClientBuilder();
-        // Configure the builder (e.g., with API key, model, etc.)
-        chatClientBuilder.withDefaultAdvisors(new SimpleLoggerAdvisor());
-        return chatClientBuilder.build();
-    }
+public StructuredOutputController(ChatClient.Builder chatClientBuilder) {
+    this.chatClient = chatClientBuilder
+        .defaultAdvisors(new SimpleLoggerAdvisor())
+        .build();
+}
 ```
 
 After rebuilding and restarting the application, send the request again and examine the logs. The logs will show the format instructions sent to the LM, including the JSON schema that defines the expected output structure.
+
+```log
+00:19:42.056 DEBUG [http-nio-8080-exec-2] o.s.a.c.c.a.SimpleLoggerAdvisor - request: ChatClientRequest[prompt=Prompt{messages=[UserMessage{content='Provide me the cities details in USA ?', properties={messageType=USER}, messageType=USER}], modelOptions=OpenAiChatOptions: {"streamUsage":false,"model":"gpt-4o-mini","temperature":0.7}}, context={spring.ai.chat.client.output.format=Your response should be in JSON format.
+Do not include any explanations, only provide a RFC8259 compliant JSON response following this format without deviation.
+Do not include markdown code blocks in your response.
+Remove the ```json markdown from the output.
+Here is the JSON Schema instance your output must adhere to:
+```{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "type" : "object",
+  "properties" : {
+    "cities" : {
+      "type" : "array",
+      "items" : {
+        "type" : "string"
+      }
+    },
+    "country" : {
+      "type" : "string"
+    }
+  },
+  "additionalProperties" : false
+}```
+}]
+```
 
 📝 **Note:** Spring AI handles the heavy lifting of formatting the request with clear instructions, simplifying the developer's role.
 
@@ -1507,12 +1866,25 @@ Let's consider a scenario where we want to retrieve a list of cities for a given
 3.  **Use `ListOutputConverter`:**  Instead of directly passing a class name to the entity method, leverage the `ListOutputConverter`. This converter instructs the LLM to return a comma-separated list of values.
 
     ```java
-    // Example usage:
-    ListOutputConverter listOutputConverter = new ListOutputConverter();
+    @GetMapping("/chat-list")
+    public ResponseEntity<List<String>> chartList(@RequestParam String message) {
+        List<String> countryCities = chatClient
+                .prompt()
+                .user(message)
+                .call().entity(new ListOutputConverter());
+        return ResponseEntity.ok(countryCities);
+    }
     ```
 
 4.  **Invoke the entity method:** Pass the `ListOutputConverter` object to the entity method.
 5.  **LLM Instructions:** The `ListOutputConverter` provides specific instructions to the LLM: "Respond with only a list of comma-separated values without any leading or trailing text. 📌 **Example** format: Foo, Bar, Baz."
+
+```log
+00:27:12.888 DEBUG [http-nio-8080-exec-2] o.s.a.c.c.a.SimpleLoggerAdvisor - request: ChatClientRequest[prompt=Prompt{messages=[UserMessage{content='Provide me the cities details in USA ?', properties={messageType=USER}, messageType=USER}], modelOptions=OpenAiChatOptions: {"streamUsage":false,"model":"gpt-4o-mini","temperature":0.7}}, context={spring.ai.chat.client.output.format=Respond with only a list of comma-separated values, without any leading or trailing text.
+Example format: foo, bar, baz
+}]
+```
+
 6.  **Expected Output:** The API will return a list of city names without any additional information like the country name or Java object details.
 
     ```json
@@ -1532,14 +1904,28 @@ Now, let's explore how to retrieve data in a map format.
 3.  **Use `MapOutputConverter`:**  Utilize the `MapOutputConverter` to instruct the LLM to return a map.
 
     ```java
-    // Example usage:
-    MapOutputConverter mapOutputConverter = new MapOutputConverter();
+    @GetMapping("/chat-map")
+    public ResponseEntity<Map<String, Object>> chartMap(@RequestParam String message) {
+        Map<String, Object> countryCities = chatClient
+                .prompt()
+                .user(message)
+                .call().entity(new MapOutputConverter());
+        return ResponseEntity.ok(countryCities);
+    }
     ```
 
 4.  **Invoke the entity method:** Pass the `MapOutputConverter` object to the entity method.
 5.  **LLM Behavior:** The LLM might make default assumptions about how to structure the map. For instance, it might use the city name as the key and include details like state, population, and area as the value object.
-6.  **Prompt Engineering:** 💡 **Tip:** You can influence the structure of the map by providing clearer and more specific instructions in your prompt message.
-7.  **Expected Output:** The API will return a map where keys are city names and values are objects containing corresponding details.
+
+```log
+request: ChatClientRequest[prompt=Prompt{messages=[UserMessage{content='Provide me the cities details in USA ?', properties={messageType=USER}, messageType=USER}], modelOptions=OpenAiChatOptions: {"streamUsage":false,"model":"gpt-4o-mini","temperature":0.7}}, context={spring.ai.chat.client.output.format=Your response should be in JSON format.
+The data structure for the JSON should match this Java class: java.util.HashMap
+Do not include any explanations, only provide a RFC8259 compliant JSON response following this format without deviation.
+Remove the ```json markdown surrounding the output including the trailing "```".
+}]
+```
+
+6.  **Expected Output:** The API will return a map where keys are city names and values are objects containing corresponding details.
 
     ```json
     {
@@ -1555,6 +1941,8 @@ Now, let's explore how to retrieve data in a map format.
       }
     }
     ```
+
+7.  **Prompt Engineering:** 💡 **Tip:** You can influence the structure of the map by providing clearer and more specific instructions in your prompt message.
 
 ### Using Bean Output Converter
 
@@ -1611,6 +1999,19 @@ new ParameterizedTypeReference<List<CountryCities>>() {};
 We don't need to override any methods.
 
 If we examine the syntax, we're passing the generic type, `List<CountryCities>`, to the constructor of `ParameterizedTypeReference`. Since it's an abstract class, we're creating an object of this class using anonymous subclass syntax. The body of the implementation class is empty.
+
+```java
+@GetMapping("/chat-bean-list")
+public ResponseEntity<List<CountryCities>> chatBeanList(@RequestParam String message) {
+    List<CountryCities> countryCities = chatClient
+        .prompt()
+        .user(message)
+        .call()
+        .entity(new ParameterizedTypeReference<List<CountryCities>>() {});
+
+    return ResponseEntity.ok(countryCities);
+}
+```
 
 With this approach, the compilation problem should be resolved.
 
