@@ -23,6 +23,8 @@ This section introduces the Retrieval-Augmented Generation (RAG) framework and i
 
 ### Limitations of Simple Prompting
 
+![Simple Prompting](/docs/img/Simple%20Prompting.png)
+
 Currently, we've been integrating LLM models into our applications using simple prompting. This involves sending a prompt directly to the LLM and receiving a response based on its pre-trained knowledge. However, this approach has several limitations:
 
 *   **Hallucination:** LLMs may generate incorrect or random answers, especially when they lack sufficient information about a topic.
@@ -37,6 +39,8 @@ Currently, we've been integrating LLM models into our applications using simple 
 ### Introducing the RAG Framework 🚀
 
 The RAG framework addresses these limitations by providing LLM models with the necessary external knowledge.
+
+![RAG Framework](/docs/img/RAG_with_LLM.png)
 
 In a RAG framework:
 
@@ -110,6 +114,8 @@ With RAG, the scenario changes:
 
 ### RAG Flow Representation 🌊
 
+![RAG Flow](/docs/img/RAG_Flow.png)
+
 Here's another representation of the RAG flow:
 
 1.  **Retriever:** Documents related to the prompt are searched within a vector database or storage system containing proprietary and non-proprietary documents.
@@ -117,6 +123,8 @@ Here's another representation of the RAG flow:
 3.  **Generation:** The LLM generates the most accurate response using the entire information.
 
 This flow is designed to be easily understandable, even for non-technical individuals. As developers, our responsibility is to build this RAG framework into our LLM applications.
+
+![RAG Flow 2](/docs/img/RAG_Flow_2.png)
 
 ### Implementing the RAG Framework 🛠️
 
@@ -126,22 +134,17 @@ To implement the RAG flow, consider the following steps:
 
     ⚠️ **Warning:** There's a specific reason for using a vector database over traditional databases, which will be explained in the next lecture.
 
-2.  **Document Loading Logic:** Write a logic or job to load all the organization's documents into the vector database. This is typically a one-time activity, but updated documents can be reloaded as needed.
+![Loading Documents to the Vector Database](/docs/img/Loading_Documents_to_the_Vector_Database.png)
 
-    ```
-    # Example: Pseudo-code for document loading
-    def load_documents_to_vector_db(documents, vector_db):
-        for doc in documents:
-            vector_db.insert(doc)
-    ```
+1.  **Document Loading Logic:** Write a logic or job to load all the organization's documents into the vector database. This is typically a one-time activity, but updated documents can be reloaded as needed.
 
-3.  **Document Chunking:** Original documents often have hundreds of pages covering multiple topics. Instead of loading them as-is, split them into smaller document chunks.
+2.  **Document Chunking:** Original documents often have hundreds of pages covering multiple topics. Instead of loading them as-is, split them into smaller document chunks.
 
     📌 **Example:** A 1000-page document (D1) can be split into 1000 different document chunks. A 100-page document (D2) can be split into 100 document chunks.
 
-4.  **Embeddings Calculation:** Calculate the embedded value for each document chunk.
+3.  **Embeddings Calculation:** Calculate the embedded value for each document chunk.
 
-5.  **Store Embeddings:** Store the calculated embedded values inside the vector store.
+4.  **Store Embeddings:** Store the calculated embedded values inside the vector store.
 
     💡 **Tip:** This may seem complex, but it's achievable using frameworks like Spring. A demo will be provided in future lectures.
 
@@ -233,14 +236,14 @@ Vector databases are the backbone of RAG. Here's how they enable the process:
 
 The Spring AI framework supports integration with various vector databases.
 
-*   The official documentation includes a section on Vector Databases.
+*   The official documentation includes a section on [Vector Databases](https://docs.spring.io/spring-ai/reference/api/vectordbs.html).
 *   Supported databases include:
     *   Azure AI Search
     *   Chroma
     *   Couchbase
     *   Elasticsearch
     *   MariaDB
-    *   MongoDB
+    *   MongoDB Atlas (Atlas is the one that makes MongoDB act like a vector database)
     *   Neo4j
     *   OpenSearch
     *   Oracle
@@ -286,6 +289,7 @@ This section outlines how to set up the Quadrant vector database locally using D
     <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-docker-compose</artifactId>
+        <scope>runtime</scope>
     </dependency>
     ```
 
@@ -298,33 +302,36 @@ This section outlines how to set up the Quadrant vector database locally using D
     Paste the following configuration into the `compose.yml` file. This configuration defines a service named `quadrant` using the `qdrant/qdrant` Docker image and maps ports 6333 (HTTP) and 6334 (gRPC).
 
     ```yaml
-    version: "3.9"
     services:
-      qdrant:
-        image: qdrant/qdrant
-        ports:
-          - "6333:6333"
-          - "6334:6334"
+        qdrant:
+            image: 'qdrant/qdrant:v1.13.0' 
+            ports:
+            - "6333:6333"
+            - "6334:6334"
     ```
 
     📝 **Note:** These configurations are based on the official Quadrant documentation. Refer to the documentation for more details.
+
+    Now whenever we start the Spring Boot application, Docker will automatically start the a container using Quadrant image.
 
 4.  **Add Additional Dependencies to `pom.xml`:**
     Include the following dependencies in your `pom.xml` file:
 
     ```xml
-    <dependency>
-        <groupId>org.springframework.ai</groupId>
-        <artifactId>spring-ai-rag</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.ai</groupId>
-        <artifactId>spring-ai-spring-store</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.ai</groupId>
-        <artifactId>spring-ai-starter-vector-qdrant</artifactId>
-    </dependency>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-rag</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-advisors-vector-store</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-vector-store-qdrant</artifactId>
+        </dependency>
+    </dependencies>
     ```
 
     *   `spring-ai-rag`: Enables Retrieval-Augmented Generation (RAG) implementation.
@@ -338,14 +345,14 @@ This section outlines how to set up the Quadrant vector database locally using D
     Add the following properties to your `application.properties` file:
 
     ```properties
-    spring.docker.compose.lifecycle-management=down
+    spring.docker.compose.stop.command=down
     spring.ai.vectorstore.qdrant.initialize-schema=true
     spring.ai.vectorstore.qdrant.host=localhost
     spring.ai.vectorstore.qdrant.port=6334
     spring.ai.vectorstore.qdrant.collection-name=easybytes
     ```
 
-    *   `spring.docker.compose.lifecycle-management=down`:  Ensures the container is completely deleted when the application stops.
+    *   `spring.docker.compose.stop.command=down`:  Ensures the container is completely deleted when the application stops.
     *   `spring.ai.vectorstore.qdrant.initialize-schema=true`:  Instructs the framework to initialize the required schema upon Quadrant database creation.
     *   `spring.ai.vectorstore.qdrant.host=localhost`: Specifies the host for the Quadrant database (default is localhost).
     *   `spring.ai.vectorstore.qdrant.port=6334`: Sets the port for gRPC communication with the Quadrant database (default is 6334).
@@ -384,17 +391,14 @@ This section details the initial steps for implementing Retrieval Augmented Gene
 
 The first step in implementing RAG is to load the information into the vector store. We'll start with a simple example and then move to a more complex one that closely resembles a real-world application.
 
-1.  **Create a `Rag` Package and `RandomDataLoader` Class:**
+1.  **Create a `rag` Package and `RandomDataLoader` Class:**
     Create a new package named `rag` and within it, create a class named `RandomDataLoader`.
 
     ```java
-    package com.example.ai.rag;
-
+    package com.knowprogram.openai.rag;
     import org.springframework.stereotype.Component;
-
     @Component
     public class RandomDataLoader {
-
     }
     ```
 
@@ -405,48 +409,26 @@ The first step in implementing RAG is to load the information into the vector st
     Inject the `VectorStore` dependency into the `RandomDataLoader` class.
 
     ```java
+    package com.knowprogram.openai.rag;
+    import lombok.RequiredArgsConstructor;
     import org.springframework.ai.vectorstore.VectorStore;
-    import org.springframework.beans.factory.annotation.Autowired;
-
+    import org.springframework.stereotype.Component;
     @Component
+    @RequiredArgsConstructor
     public class RandomDataLoader {
-
         private final VectorStore vectorStore;
-
-        @Autowired
-        public RandomDataLoader(VectorStore vectorStore) {
-            this.vectorStore = vectorStore;
-        }
     }
     ```
 
     📝 **Note:** Since we've configured a `VectorStore` dependency (e.g., using Quadrant) in our Spring Boot application, Spring will automatically create a bean of type `VectorStore` (specifically, a `QuadrantVectorStore` instance) during startup.
 
-4.  **Create a Constructor for Dependency Injection:**
-    Create a constructor to inject the `VectorStore` dependency.
-
-5.  **Create a Method to Load Sentences:**
+4.  **Create a Method to Load Sentences:**
     Create a method named `loadSentencesIntoVectorStore` to handle the data loading. Annotate it with `@PostConstruct`.
 
     ```java
-    import jakarta.annotation.PostConstruct;
-
-    import java.util.List;
-
-    @Component
-    public class RandomDataLoader {
-
-        private final VectorStore vectorStore;
-
-        @Autowired
-        public RandomDataLoader(VectorStore vectorStore) {
-            this.vectorStore = vectorStore;
-        }
-
-        @PostConstruct
-        public void loadSentencesIntoVectorStore() {
-            // Data loading logic will go here
-        }
+    @PostConstruct
+    public void loadSentencesIntoVectorStore() {
+        // Data loading logic will go here
     }
     ```
 
@@ -454,55 +436,69 @@ The first step in implementing RAG is to load the information into the vector st
 
     ⚠️ **Warning:** While `@PostConstruct` is used here for demo purposes, in a real-world application, data loading should be handled by a scheduled task or a dedicated job.
 
-6.  **Populate Sentences and Create Documents:**
-    Inside the `loadSentencesIntoVectorStore` method, add the following logic:
-
     ```java
-    import org.springframework.ai.document.Document;
-
-    import java.util.Arrays;
-    import java.util.List;
-    import java.util.stream.Collectors;
-
     @PostConstruct
     public void loadSentencesIntoVectorStore() {
         List<String> sentences = Arrays.asList(
-                "Java is a popular programming language.",
-                "Python is known for its readability.",
-                "JavaScript is essential for web development.",
-                "Docker simplifies application deployment.",
-                "A good credit score is important for financial health.",
-                "Mutual funds offer diversified investment options.",
-                "Bitcoin is a decentralized digital currency.",
-                "Ethereum enables smart contracts.",
-                "The stock market can be volatile.",
-                "Compound interest can significantly increase savings.",
-                "Photosynthesis is essential for plant life.",
-                "The water cycle is crucial for Earth's ecosystems.",
-                "The ozone layer protects us from harmful UV radiation.",
-                "Earth revolves around the sun.",
-                "Lightning is a powerful natural phenomenon.",
-                "DNA carries genetic information.",
-                "Volcanoes can cause significant destruction.",
-                "Earthquakes can be devastating.",
+                "Java is used for building scalable enterprise applications.",
+                "Python is commonly used for machine learning and automation tasks.",
+                "JavaScript is essential for creating interactive web pages.",
+                "Docker packages applications into lightweight containers.",
+                "Kubernetes automates container orchestration at scale.",
+                "Redis is an in-memory data store used for caching.",
+                "PostgreSQL supports complex queries and full ACID compliance.",
+                "Kafka is a distributed event streaming platform.",
+                "REST APIs allow stateless client-server communication.",
+                "GraphQL enables clients to fetch exactly the data they need.",
+                "Credit scores influence the interest rates on loans.",
+                "Mutual funds pool money from investors to buy securities.",
+                "Bitcoin operates on a decentralized peer-to-peer network.",
+                "Ethereum supports smart contract deployment.",
+                "The stock market opens at 9:30 a.m. EST on weekdays.",
+                "Compound interest increases investment returns over time.",
+                "Diversifying investments reduces overall risk.",
+                "A blockchain is a distributed, immutable ledger of transactions.",
+                "Photosynthesis is how plants convert sunlight into energy.",
+                "The water cycle involves evaporation, condensation, and precipitation.",
+                "The ozone layer protects Earth from harmful ultraviolet rays.",
+                "Earth revolves around the Sun in an elliptical orbit.",
+                "Lightning is a discharge of electricity caused by charged clouds.",
+                "DNA is the molecule that carries genetic instructions in living organisms.",
+                "Volcanoes form when magma rises through Earth's crust.",
+                "Earthquakes are caused by sudden tectonic shifts.",
                 "The Sahara is the largest hot desert in the world.",
-                "Mountains are formed by tectonic activity.",
-                "Kilimanjaro is the highest mountain in Africa.",
-                "Japan is known for its technology and culture.",
-                "China has a large and growing economy.",
-                "Canada is the second-largest country in the world.",
-                "The Amazon River is the largest river by discharge volume of water in the world.",
-                "Pizza is a popular Italian dish.",
-                "Sushi is a traditional Japanese food.",
+                "Mount Kilimanjaro is the tallest mountain in Africa.",
+                "Japan is known for its cherry blossoms and advanced technology.",
+                "The Great Wall of China is over 13,000 miles long.",
+                "Niagara Falls is located between Canada and the U.S.",
+                "The Amazon River is the second longest river in the world.",
+                "Oats are high in fiber and help reduce cholesterol.",
+                "Drinking water improves digestion and skin health.",
+                "A balanced diet includes proteins, carbs, fats, and vitamins.",
+                "Broccoli is rich in vitamins A, C, and K.",
+                "Green tea contains antioxidants beneficial for metabolism.",
+                "Too much sugar increases the risk of diabetes.",
+                "Walking 30 minutes a day improves cardiovascular health.",
                 "Meditation can reduce stress and improve focus.",
-                "Walking 30 minutes daily is beneficial for health.",
-                "Reading daily expands knowledge and vocabulary.",
-                "Setting daily goals increases productivity."
+                "Gratitude journaling is linked to higher happiness levels.",
+                "Deep breathing exercises help regulate anxiety.",
+                "Reading daily improves vocabulary and cognitive function.",
+                "Setting daily goals increases productivity.",
+                "STEM stands for Science, Technology, Engineering, and Mathematics.",
+                "Bloom’s taxonomy categorizes educational goals.",
+                "Project-based learning enhances student engagement.",
+                "Online courses offer flexibility for remote learners.",
+                "Flashcards are effective for memorizing vocabulary.",
+                "Agile methodology promotes iterative software development.",
+                "OKRs help align team goals with business strategy.",
+                "Remote work offers flexibility but requires clear communication.",
+                "CRM systems manage customer relationships and sales pipelines.",
+                "SWOT analysis identifies strengths, weaknesses, opportunities, and threats."
         );
 
         List<Document> documents = sentences.stream()
-                .map(sentence -> new Document(sentence))
-                .collect(Collectors.toList());
+                .map(Document::new)
+                .toList();
 
         vectorStore.add(documents);
     }
@@ -519,7 +515,7 @@ The first step in implementing RAG is to load the information into the vector st
 
     💡 **Tip:** Ensure you select the correct `Document` class from `org.springframework.ai.document.Document` to avoid import conflicts.
 
-7.  **Build the Application:**
+5.  **Build the Application:**
     Build the Spring Boot application to ensure there are no compilation errors.
 
 ### Building a REST API for RAG
@@ -548,48 +544,32 @@ Now that the data is loaded into the vector store, the next step is to build a R
 3.  **Inject Dependencies:**
     Inject `ChatClient` and `VectorStore` dependencies into the `RagController`.
 
-    ```java
-    import org.springframework.ai.chat.ChatClient;
-    import org.springframework.ai.vectorstore.VectorStore;
-    import org.springframework.beans.factory.annotation.Autowired;
-    import org.springframework.beans.factory.annotation.Qualifier;
-
+    ```java    
     @RestController
     @RequestMapping("/api/rag")
+    @RequiredArgsConstructor
     public class RagController {
-
-        private final ChatClient chatClient;
+        private final ChatClient chatMemoryChatClient;
         private final VectorStore vectorStore;
-
-        @Autowired
-        public RagController(
-                @Qualifier("chatMemoryChatClient") ChatClient chatClient,
-                VectorStore vectorStore) {
-            this.chatClient = chatClient;
-            this.vectorStore = vectorStore;
-        }
     }
     ```
 
-    📝 **Note:** Use the `@Qualifier` annotation to specify the correct `ChatClient` bean if there are multiple implementations.
-
-4.  **Create a Constructor for Dependency Injection:**
-    Create a constructor to inject the `ChatClient` and `VectorStore` dependencies.
-
-5.  **Create a Prompt Template File:**
+4.  **Create a Prompt Template File:**
     Create a new prompt template file named `system-prompt-random-data-template.st` in the `resources/prompt-template` directory.
 
     ```text
     You are a helpful assistant answering questions based upon the given context in the documents section and no prior knowledge.
     If the answer is not in the documents section, then reply with I don't know.
 
-    Documents:
-    <documents>
+    DOCUMENTS:
+    -----------
+    {documents}
+    -----------
     ```
 
     This template defines the system message for the LLM, instructing it to answer questions based only on the provided documents.
 
-6.  **Load the Prompt Template:**
+5.  **Load the Prompt Template:**
     In the `RagController`, load the prompt template as a resource.
 
     ```java
@@ -598,25 +578,23 @@ Now that the data is loaded into the vector store, the next step is to build a R
 
     @RestController
     @RequestMapping("/api/rag")
+    @RequiredArgsConstructor
     public class RagController {
 
-        private final ChatClient chatClient;
+        private final ChatClient chatMemoryChatClient;
         private final VectorStore vectorStore;
 
         @Value("classpath:/prompt-template/system-prompt-random-data-template.st")
         private Resource systemPromptTemplate;
 
-        @Autowired
-        public RagController(
-                @Qualifier("chatMemoryChatClient") ChatClient chatClient,
-                VectorStore vectorStore) {
-            this.chatClient = chatClient;
-            this.vectorStore = vectorStore;
+        @GetMapping("/random/chat")
+        public String randomChat(
+            @RequestParam String message, 
+            @RequestHeader String username) {
+            // ...
         }
     }
     ```
-
-7
 
 ---
 
@@ -696,8 +674,16 @@ The extracted `similarContext` is then passed as input to a prompt template and 
 7.  Finally, invoke the `call().getContent()` method to get the answer from the LLM.
 
 ```java
-String answer = chatClient.prompt(prompt -> prompt.system(systemSpec -> systemSpec.text(promptTemplate).param("documents", similarContext)).advisors(user).user(message)).call().getContent();
+String answer = chatMemoryChatClient
+                .prompt()
+                .system(promptSystemSpec -> promptSystemSpec.text(promptTemplate).param("documents", similarContext))
+                .advisors(a -> a.param(CONVERSATION_ID, username))
+                .user(message)
+                .call()
+                .content();
 ```
+
+See complete method here: [RagController](/sec05/spring-ai/src/main/java/com/knowprogram/openai/controller/RagController.java)
 
 ### Application Lifecycle and Vector Store Data
 
@@ -705,7 +691,9 @@ String answer = chatClient.prompt(prompt -> prompt.system(systemSpec -> systemSp
 
 If the container is not deleted, restarting the application will add new data to the existing vector store.
 
-⌨️ **Shortcut:** To avoid writing logic to check for duplicate data, the application is configured to always delete and recreate the container on startup. This ensures a clean slate for each run.
+⌨️ **Shortcut:** To avoid writing logic to check for duplicate data, the application is configured to always delete and recreate the container on startup: `spring.docker.compose.stop.command=down`. This ensures a clean slate for each run.
+
+Restart the application and check the vector store dashboard. You should see new data added to the vector store.
 
 ### Vector Store Dashboard
 
@@ -720,94 +708,76 @@ In real applications, tuning the search operation using `topK()` and `similarity
 
 ---
 
-## 7. Testing the New REST API
+## 7. 🚀 Testing the New REST API with Vector Store Integration
 
-Let's dive into testing our new REST API! 🚀
+We’re ready to test our REST API! To observe the data flow, I set a breakpoint in the controller.
 
-I've set a breakpoint at line 42 in Postman to observe the data flow.
+### 🌌 Query 1: "Mars" (not in dataset)
 
-First, I'll ask a question about "Mars," even though the loaded data doesn't contain any information about it. Ideally, the API should respond with "I don't know."
+`curl --location 'http://localhost:8080/api/rag/random/chat?message=Tell%20me%20about%20MARS' \
+--header 'username: madan11'`
 
-I'll use the username "modern11" and click "Send."
+* **Query:** *"Tell me about Mars"*
+* **Context retrieved:** Sahara, Japan, and Earth (most semantically related sentences).
+* **Expected:** Since none mention Mars → LLM should respond *"I don’t know."*
+* **Result:** ✅ Correct!
 
-The breakpoint hits, and let's examine the data:
+### ⚡ Query 2: "Redis" (present in dataset)
 
-*   We have three sentences: one about the Sahara, one about Japan, and one about Earth.
-*   These are considered the most relevant sentences to the query about "Mars."
+* **Query:** *"What do you know about Redis?"*
+* **Context retrieved:** Redis, REST APIs, and PostgreSQL sentences.
+* **Result:** ✅ Response: *"Redis is an in-memory data store used for caching."*
 
-The system prompt will receive these sentences. Since they don't contain information about Mars, the LLM should respond with "I don't know."
+### 💾 Query 3: "MySQL" (not in dataset)
 
-And it does! ✅
+* **Query:** *"Tell me about MySQL."*
+* **Context retrieved:** PostgreSQL, Redis, and Java sentences.
+* **Result:** ✅ Correct *"I don’t know."*
 
-Next, I'll ask about "Redis." There *is* a statement about Redis in the random data loader.
+### 🚶 Query 4: "Walking daily" (semantic match)
 
-Let's see what happens. I'm clicking the "Send" button.
+* **Query:** *"What happens if I walk daily?"*
+* **Context retrieved:**
 
-The context includes sentences about Redis, REST APIs, and PostgreSQL.
+  * Walking 30 minutes improves cardiovascular health
+  * Setting daily goals
+  * Reading daily
+* **Result:** ✅ Correctly pulled lifestyle-related sentences
+* **Response:** *"Walking 30 minutes a day improves cardiovascular health."*
 
-Again, it's doing a good job! 👍
+💡 **Tip:** You can improve responses by refining the **system prompt**. For example, ask the LLM to provide **descriptive answers** instead of just echoing context.
 
-After releasing the breakpoint, the response includes: "Redis is an in-memory data store used for caching."
+### 🌊 Query 5: "Niagara Falls" (present in dataset)
 
-Now, I'll ask about "MySQL," which is *not* mentioned in the data.
+* **Query:** *"What do you know about Niagara Falls?"*
+* **Result:** ✅ *"Niagara Falls is located between Canada and the US."*
 
-The context includes information about PostgreSQL, Redis, and Java.
+### 💰 Query 6: "Investments" (edge case)
 
-Releasing the breakpoint, the response is "I don't know," which is the expected behavior. ✅
+* **Query:** *"Tell me about investments."*
+* **Context retrieved:** Diversification, compound interest, and mutual funds
+* **Result:** 😕 Initially returned *"I don’t know."*
+* **Retry with “?”** → *"Tell me about investments?"* → 🎉 Meaningful response
 
-Let's try some other scenarios.
+⚠️ **Observation:** LLMs can be unpredictable. It’s safer for them to say *"I don’t know"* than to generate incorrect information.
 
-There's a statement about "walking" in the data loader: "Walking 30 minutes in a day improves cardiovascular health."
+### 🔄 Important Note on DevTools
 
-I'll ask: "What happens if I walk daily?" This is intentionally different from the original statement.
+⚠️ **Warning:** If you still have the `spring-boot-devtools` dependency in your `pom.xml`, remove it.
 
-The context includes the walking-related sentence, a sentence about setting daily goals, and a sentence about reading daily. All are related to lifestyle.
+* With DevTools, every rebuild restarts the app in the background
+* This causes your **random data loader** to reload and duplicate entries in the vector store
 
-Are you seeing the power of the vector store? 🤯 It searches based on *meaning*, not just content.
+✅ Solutions:
 
-The response includes the sentence: "Walking 30 minutes a day improves cardiovascular health." We're getting the same sentence defined in the loader class.
+1. Remove `devtools` dependency
+2. Or update your loader logic to check if data already exists before re-inserting
 
-This is due to the instructions in the system prompt.
+### 🎯 Wrap-Up
 
-💡 **Tip:** If you update the system prompt to instruct the LLM to use the information and provide more descriptive answers, you'll get more detailed responses. I'll leave that as an exercise for you.
-
-Next question: "What do you know about Niagara Falls?"
-
-There's a statement about Niagara Falls in the loader class.
-
-The response: "Niagara Falls is located between Canada and the US."
-
-Last question: "Tell me about investments."
-
-We have several sentences about investments.
-
-The context includes sentences about diversifying investments, compound interest, and mutual funds.
-
-Releasing the breakpoint, I expected a better response, but I got "I don't know." 😕
-
-Maybe I need to fine-tune the message.
-
-I'll add a question mark: "Tell me about investments?"
-
-Releasing the breakpoint...
-
-This time, we got a meaningful response! 🎉
-
-This highlights one of the problems with LLM responses: they are not always predictable. However, it's generally better for them to respond with "I don't know" than to generate incorrect information.
-
-Hopefully, you're clear on the RAG flow we've implemented so far.
-
-Before closing, let me share an important piece of information regarding your `pom.xml` file.
-
-⚠️ **Warning:** Please make sure you are deleting the dev tools related dependency.
-
-The reason is that whenever you make a change in your project and do a build, it will restart the application behind the scenes. This causes the random data loader to be recreated, adding duplicate data to the vector store.
-
-To avoid this, I recommend removing the dev tools dependency.
-
-Alternatively, you could add logic to the class to check if data already exists and, if so, prevent reloading it.
-
-So far, we've used a simple example. In the next lecture, we'll explore a more realistic use case.
+* We’ve validated our RAG flow with **known, unknown, and semantically related queries**
+* The vector store is proving its power — retrieving context by **meaning**, not just keywords
+* We also learned that prompt design and application setup (like avoiding duplicate data) are critical for reliable results.
 
 📝 **Note:** Example of devtools dependency in pom.xml:
 
@@ -823,27 +793,9 @@ So far, we've used a simple example. In the next lecture, we'll explore a more r
 
 ## 8. RAG Implementation with Document Loading
 
-This section details the process of implementing Retrieval Augmented Generation (RAG) using a specific HR policy document. The goal is to enable a language model (LLM) to answer questions accurately based on the document's content.
+This section details the process of implementing Retrieval Augmented Generation (RAG) using a specific [HR policy document](/sec05/spring-ai/src/main/resources/Eazybytes_HR_Policies.pdf). The goal is to enable a language model (LLM) to answer questions accurately based on the document's content.
 
-For demonstration purposes, a PDF document containing the HR policies of a fictional company called Easy Bytes was created using ChatGPT. The document covers various aspects of employment, including:
-
-*   Table of contents
-*   Introduction
-*   Code of conduct
-*   Employment policies (equal opportunity, probation period)
-*   Background verification
-*   Working hours and attendance
-*   Leave policies (casual, sick, earned, maternity, paternity, unpaid)
-*   Payroll and compensation
-*   Performance management
-*   Employee benefits (health insurance, wellness program, referral bonus)
-*   Travel and expense policy
-*   Workplace context and anti-harassment policy
-*   IT and data security policy
-*   Remote work policy
-*   Grievance address
-*   Exit policy
-*   Acknowledgment
+For demonstration purposes, a PDF document containing the HR policies of a fictional company called Easy Bytes was created using ChatGPT. The document covers various aspects of employment, including: Code of conduct, Employment policies (equal opportunity, probation period), e.t.c.
 
 The document contains some intentionally "abnormal" details, such as salaries being credited on the ninth of the month and working hours from 2 PM to 11 PM. This is to ensure the LLM relies on the document's content rather than general knowledge.
 
@@ -854,35 +806,79 @@ The implementation involves the following steps:
     *   The `@Component` annotation marks it as a Spring component.
     *   A `vectorStore` dependency is injected.
     *   A `@Value` annotation is used to specify the location of the PDF file within the resources directory.
-    *   📝 **Note:** The PDF file should be downloaded from the GitHub repository and placed in the `resources` directory.
+    *   📝 **Note:** The [PDF file](/sec05/spring-ai/src/main/resources/Eazybytes_HR_Policies.pdf) should be downloaded from the GitHub repository and placed in the `resources` directory.
+
+    ```java
+    @Component
+    @RequiredArgsConstructor
+    public class HRPolicyLoader {
+        private final VectorStore vectorStore;
+
+        @Value("classpath:/Eazybytes_HR_Policies.pdf")
+        private final Resource hrPolicyPdf;
+
+        @PostConstruct
+        public void loadPdf(){
+            // ...
+        }
+    }
+    ```
+
 2.  **Reading the PDF:**
-    *   Apache Tika is used to extract text from the PDF.
+    *   [Apache Tika](https://tika.apache.org/) is used to extract text from the PDF.
     *   Apache Tika is a powerful library that supports reading text from various file types (PPT, XLS, PDF, Word documents, etc.).
     *   A dependency for `spring-document-reader` is added to the `pom.xml` file.
     ```xml
     <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-data-rest</artifactId>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-tika-document-reader</artifactId>
+        <version>1.0.0</version>
     </dependency>
     ```
     *   A `TikaDocumentReader` object is created, passing the PDF file location to its constructor.
     *   The `get()` method of the `TikaDocumentReader` is invoked to retrieve the document content as a list of `Document` objects.
+    ```java
+    import org.springframework.ai.reader.tika.TikaDocumentReader;
+
+    TikaDocumentReader tikaDocumentReader = new TikaDocumentReader(hrPolicyPdf);
+    List<Document> documents = tikaDocumentReader.get();
+    ```
 3.  **Storing in Vector Store:**
-    *   The list of `Document` objects is added to the vector store using the `add()` method.
-    *   ⚠️ **Warning:**  Initially, the document is not split into smaller chunks, which can lead to performance issues and increased token consumption.
+    *   The list of `Document` objects is added to the vector store using the `add()` method. `vectorStore.add(documents);`
+    *   ⚠️ **Warning:**  Initially, the document is not split into smaller chunks, which can lead to performance issues and increased token consumption. We will address this in the next section.
 4.  **Creating a REST API:**
     *   A new REST API endpoint (`/document/chat`) is created in the `RagController`.
     *   The API uses a system prompt template to instruct the LLM.
     *   The system prompt instructs the LLM to answer questions about Easy Bytes company policies based on the provided context.
     *   If the answer is not found in the document, the LLM should respond with "I don't know."
-    *   The `HRSystemTemplate` is used instead of the original `promptTemplate`.
+    *   The [HRSystemTemplate.st](/sec05/spring-ai/src/main/resources/prompt-templates/HRSystemTemplate.st) is used instead of the original `promptTemplate`.
+    ```txt
+    You are a helpful assistant, answering questions about EazyBytes company policies to it's employees.
+
+    Given the context in the DOCUMENTS section and no prior knowledge, answer the employee's question. If the answer is not in the DOCUMENTS section, then reply with "I don't know".
+
+    DOCUMENTS:
+    ----------
+    {documents}
+    ----------
+    ```
 5.  **Token Usage Tracking:**
     *   A `TokenUsageAuditAdvisor` is created to track token usage details.
-    *   The advisor is added to the `ChatClient` to log token consumption.
+    *   The advisor is added to the `ChatMemoryChatClientConfig` to log token consumption.
+    ```java
+    @Bean("chatMemoryChatClient")
+    public ChatClient chatMemoryChatClient(ChatClient.Builder chatClientBuilder, ChatMemory chatMemory) {
+        Advisor loggerAdvisor = new SimpleLoggerAdvisor();
+        Advisor memoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory).build();
+        Advisor tokenUsageAdvisor = new TokenUsageAuditAdvisor();
+        return chatClientBuilder.defaultAdvisors(List.of(loggerAdvisor, memoryAdvisor, tokenUsageAdvisor)).build();
+    }
+    ```   
 6.  **Testing the Implementation:**
-    *   A question about working hours is sent to the API.
+    *   A question about working hours is sent to the API:- `curl --location 'http://localhost:8080/api/rag/document/chat?message=What%20are%20the%20working%20hours%3F' \
+--header 'username: madan12'`
     *   The LLM correctly answers based on the document's content.
-    *   Token usage details are examined, revealing a high number of prompt tokens due to the entire document being included in the context.
+    *   Token usage details are examined, **revealing a high number of prompt tokens due to the entire document being included in the context**.
     *   A breakpoint is set in the `RagController` to verify that the entire document content is being sent to the LLM.
     *   Another question about the notice period is asked, and the LLM provides the correct answer.
 
@@ -904,7 +900,7 @@ To create an effective Retrieval-Augmented Generation (RAG) implementation, it's
 1.  **Using a Text Splitter:** Employ a text splitter class, such as `TokenTextSplitter`, to divide your documents.
 
     ```java
-    TextSplitter textSplitter = new TokenTextSplitterBuilder()
+    TextSplitter textSplitter = TokenTextSplitter.builder()
             .withChunkSize(100)
             .withMaxNumChunks(400)
             .build();
@@ -923,6 +919,22 @@ To create an effective Retrieval-Augmented Generation (RAG) implementation, it's
     This will take your original documents (`docs`) and return a list of smaller, split documents (`splittedDocs`).
 
 4.  **Storing Chunks:** Add the resulting smaller documents to your vector store.
+
+```java
+@PostConstruct
+public void loadPdf() {
+    TikaDocumentReader tikaDocumentReader = new TikaDocumentReader(hrPolicyPdf);
+    List<Document> documents = tikaDocumentReader.get();
+
+    TokenTextSplitter textSplitter = TokenTextSplitter.builder()
+            .withChunkSize(100)
+            .withMaxNumChunks(400)
+            .build();
+
+    List<Document> splittedDocs = textSplitter.split(documents);
+    vectorStore.add(splittedDocs);
+}
+```
 
 ### Understanding Chunk Size Parameters
 
@@ -960,22 +972,25 @@ Instead of manually populating search requests and iterating through documents, 
 **Configuration Steps:**
 
 1.  **Create a Retrieval Augmentation Advisor Bean:**
-    *   Go to the class where you are creating the beans for `chat line` and `chart memory`.
-    *   Create a bean of type `RetrievalAugmentationAdvisor`.
+    *   Go to the `ChatMemoryChatClientConfig` class.
+    *   Create a new bean of type `RetrievalAugmentationAdvisor`.
     *   This method requires a bean of `vector store` to know where to query for similar documents.
 
 2.  **Build the Advisor:**
     *   Use the following code snippet to build the advisor:
 
     ```java
-    RetrievalAugmentationAdvisor advisor = RetrievalAugmentationAdvisor.builder()
-            .documentRetriever(VectorStoreDocumentRetriever.builder()
-                .vectorStore(vectorStoreBean)
-                .topK(3)
-                .similarityThreshold(0.5f)
-                .build())
-            .build();
-    return advisor;
+    @Bean
+    RetrievalAugmentationAdvisor retrievalAugmentationAdvisor(VectorStore vectorStore){
+        RetrievalAugmentationAdvisor advisor = RetrievalAugmentationAdvisor.builder()
+                .documentRetriever(VectorStoreDocumentRetriever.builder()
+                    .vectorStore(vectorStoreBean)
+                    .topK(3)
+                    .similarityThreshold(0.5)
+                    .build())
+                .build();
+        return advisor;
+    }
     ```
 
     *   `VectorStoreDocumentRetriever.builder()`:  Creates a document retriever.
@@ -988,6 +1003,16 @@ Instead of manually populating search requests and iterating through documents, 
 3.  **Configure the Chat Client:**
     *   Pass the newly created advisor as a dependency to the method where you create the `chat client` bean.
     *   Inject the advisor into the list of advisors for the chat client.
+
+    ```java
+    public ChatClient chatMemoryChatClient(ChatClient.Builder chatClientBuilder, 
+        ChatMemory chatMemory, 
+        RetrievalAugmentationAdvisor retrievalAugmentationAdvisor) { // pass the advisor
+
+        // ...
+        return chatClientBuilder.defaultAdvisors(List.of(loggerAdvisor, memoryAdvisor, tokenUsageAdvisor, retrievalAugmentationAdvisor)).build();
+    }
+    ```
 
 4.  **Update the REST Controller:**
     *   Comment out the manual code for populating the search request, searching the vector store, and extracting text from documents. This is no longer needed.
@@ -1050,7 +1075,7 @@ We know that calculating embeddings—generating vector representations for text
 
 ### Quadrant Vector Store
 
-Let's consult the official documentation to understand how Quadrant, our vector store, handles embeddings.
+Let's consult the official documentation to understand how [Quadrant](https://docs.spring.io/spring-ai/reference/api/vectordbs/qdrant.html), our vector store, handles embeddings.
 
 Quadrant is an open-source, high-performance vector search engine/database. It uses specific algorithms for efficient vector storage and retrieval.
 
@@ -1130,12 +1155,12 @@ The `EmbeddingResponse` contains the embedded values (vector numbers) for each d
 
 The default embedding model (e.g., OpenAI's) can be changed using a property.
 
-OpenAI offers several embedding models with varying input limits and pricing.
+OpenAI offers several embedding models with varying input limits and pricing. See more [here](https://platform.openai.com/docs/guides/embeddings).
 
 To specify a different model, use the `spring.ai.embeddings.options.model` property in `application.properties`:
 
 ```properties
-spring.ai.embeddings.options.model=text-embedding-3-large
+spring.ai.openai.embedding.options.model=text-embedding-3-large
 ```
 
 Replace `text-embedding-3-large` with a valid model name from the LLM provider's documentation.
@@ -1149,7 +1174,5 @@ The framework calculates the embedded values of our documents by leveraging the 
 OpenAI offers various embedding models with different capabilities and pricing.
 
 You can customize the embedding model using the `spring.ai.embeddings.options.model` property.
-
-All the code discussed is available in the GitHub repository, along with slides containing important code snippets.
 
 ---
