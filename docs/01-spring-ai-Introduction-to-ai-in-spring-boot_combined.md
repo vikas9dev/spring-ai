@@ -1,7 +1,7 @@
-# 01 Spring AI – Introduction To AI In Spring Boot
+# Spring AI – Introduction To AI In Spring Boot
 
 Sections-
-- [01 Spring AI – Introduction To AI In Spring Boot](#01-spring-ai--introduction-to-ai-in-spring-boot)
+- [Spring AI – Introduction To AI In Spring Boot](#spring-ai--introduction-to-ai-in-spring-boot)
   - [1. Spring AI: From Hello World to Hello LMS](#1-spring-ai-from-hello-world-to-hello-lms)
     - [Why Spring AI is a Game Changer 🚀](#why-spring-ai-is-a-game-changer-)
     - [Course Agenda 🗓️](#course-agenda-️)

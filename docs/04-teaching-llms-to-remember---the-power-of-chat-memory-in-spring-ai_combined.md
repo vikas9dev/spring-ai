@@ -39,8 +39,8 @@ To illustrate this, let's create a simple Spring AI application.
     public class ChatMemoryChatClientConfig {
 
         @Bean(name = "chatMemoryChatClient")
-        public ChatClient chatMemoryChatClient(AiClient aiClient) {
-            return aiClient.getChatClient();
+        public ChatClient chatMemoryChatClient(ChatClient.Builder chatClientBuilder) {
+            return chatClientBuilder.build();
         }
     }
     ```
@@ -49,33 +49,37 @@ To illustrate this, let's create a simple Spring AI application.
 
 2.  **Inject the `ChatClient` into a Controller:**
 
-    We'll create a REST controller to expose an endpoint that uses the `ChatClient`.
+    We'll create a REST controller to expose an endpoint that uses the `ChatClient`. Add lombok dependencies to the project.
 
     ```java
     @RestController
-    @RequestMapping("/chat-memory")
+    @RequestMapping("/api")
+    @RequiredArgsConstructor
     public class ChatMemoryController {
 
-        private final ChatClient chatClient;
+        private final ChatClient chatMemoryChatClient;
 
-        public ChatMemoryController(@Qualifier("chatMemoryChatClient") ChatClient chatClient) {
-            this.chatClient = chatClient;
-        }
-
-        @GetMapping
-        public String chat(@RequestParam("message") String message) {
-            return chatClient.call(message);
+        @GetMapping("/chat-memory")
+        public ResponseEntity<String> chatMemory(@RequestParam String message) {
+            return ResponseEntity.ok(chatMemoryChatClient.prompt().user(message).call().content());
         }
     }
     ```
 
-    📌 **Example:** The `@Qualifier` annotation is used to specify which `ChatClient` bean to inject, since we have multiple defined.
+    📌 **Example:** The `@Qualifier` annotation is used to specify which `ChatClient` bean to inject, since we have multiple defined. However, we have directly used the @Bean("name") so we can use `private final ChatClient chatMemoryChatClient` along with `@RequiredArgsConstructor`. See more here:- [https://chatgpt.com/share/68ae4ef8-bf68-8005-b393-b22920ea501d](https://chatgpt.com/share/68ae4ef8-bf68-8005-b393-b22920ea501d)
 
 3.  **Test the API:**
 
-    *   Send a message to the API: "My name is Madan."
+    *  Start your Spring AI application. Go to the home directory of the project and run the application:
+    ```bash
+    mvn clean install
+    OPENAI_API_KEY=sk-xxxxxx mvn spring-boot:run
+    ```
+    *  Use Postman (or a similar tool) to send a GET request to your API endpoint.
+    *  Include a `message` query parameter with your prompt. 📌 **Example:** `http://localhost:8080/api/chat?message=My name is Rakesh`
+    *   Send a message to the API: "My name is Rakesh."
     *   The LLM responds with a generic greeting.
-    *   Then, ask "What is my name?"
+    *   Then, ask "What is my name?": `{{baseURL}}/api/chat-memory?message=What is my name?`
     *   The LLM responds that it doesn't know your name. 🤯
 
     This demonstrates that the LLM has no memory of the previous interaction.
@@ -128,8 +132,8 @@ The `ChatMemory` interface defines a contract for storing and managing chat conv
 
 ```java
 public interface ChatMemory {
-    void add(ChatMessage message);
-    List<ChatMessage> get(String conversationId);
+    void add(String conversationId, List<Message> messages);
+    List<Message> get(String conversationId);
     void clear(String conversationId);
 }
 ```
@@ -164,15 +168,19 @@ The `ChatMemoryRepository` interface defines a contract for storing and retrievi
 
 ```java
 public interface ChatMemoryRepository {
-    List<ChatMessage> findByConversationId(String conversationId);
-    void saveAll(String conversationId, List<ChatMessage> messages);
-    void delete(String conversationId);
+    List<String> findConversationIds();
+
+    List<Message> findByConversationId(String conversationId);
+
+    void saveAll(String conversationId, List<Message> messages);
+
+    void deleteByConversationId(String conversationId);
 }
 ```
 
 Spring provides an `InMemoryChatMemoryRepository` implementation.
 
-*   It uses a `ConcurrentHashMap` as an in-memory storage. 🧠
+*   It uses a `ConcurrentHashMap` as an in-memory storage. 🧠 `Map<String, List<Message>> chatMemoryStore = new ConcurrentHashMap();`
 *   It saves conversation messages using the `put` method. ➕
 *   It deletes messages using the `remove` method. 🗑️
 *   It retrieves messages using the `get` method. 📤
@@ -187,21 +195,19 @@ Spring also provides a `JdbcChatMemoryRepository` for storing chat memories in d
 
 By implementing the chat memory interface, we can define the strategy for storing and retrieving chat messages.
 
-📌 **Example:** Message Window Chat Memory maintains a maximum of 20 historical chat messages. Older messages are discarded.
+📌 **Example:** `MessageWindowChatMemory` maintains a maximum of 20 historical chat messages. Older messages are discarded.
 
-The implementation class includes methods like `add` and `get` that interact with the chat memory repository.
-
-📌 **Example:** When the `get` method is invoked, it calls the `findById` method in the in-memory chat memory repository.
-
-But who invokes these methods? Someone needs to call the `get`, `add`, or `clear` methods exposed by the chat memory implementation class, process the list of messages, and populate the request sent to the LM models.
+- The implementation class includes methods like `add` and `get` that interact with the chat memory repository.
+- When the `get` method is invoked, it calls the `findById` method in the in-memory chat memory repository.
+- But who invokes these methods? Someone needs to call the `get`, `add`, or `clear` methods exposed by the chat memory implementation class, process the list of messages, and populate the request sent to the LM models.
 
 In Spring Framework, **advisors** handle this responsibility. They intercept requests and responses to and from the LM models. Spring provides three memory advisors for integrating chat memory functionality into the chat client bean:
 
-1.  Message Chat Memory Advisor
-2.  Prompt Chat Memory Advisor
-3.  Vector Store Chat Memory Advisor
+1.  `MessageWindowChatMemory`
+2.  `PromptChatMemoryAdvisor`
+3.  `VectorStoreChatMemoryAdvisor`
 
-### 1. Message Chat Memory Advisor
+### 1. MessageWindowChatMemory
 
 When configured, this advisor interacts with the chat memory implementation and repository to fetch messages. It stores messages as structured messages, categorized as user, system, and assistant messages.
 
@@ -211,7 +217,7 @@ The advisor injects past messages directly into the prompt, preserving the messa
 
 This advisor is best when the LM needs to see the full chat history with message roles, like a real chat log.
 
-### 2. Prompt Chat Memory Advisor
+### 2. PromptChatMemoryAdvisor
 
 When configured, this advisor converts the entire chat memory into plain text, regardless of the message role. This text is appended to the system prompt, acting as a summary.
 
@@ -219,7 +225,9 @@ This advisor is suitable for simpler LMs that don't support different role messa
 
 📌 **Example:** For LMs without separate user role messages, this advisor is recommended.
 
-### 3. Vector Store Chat Memory Advisor
+### 3. VectorStoreChatMemoryAdvisor
+
+_You wont find this class in Spring AI. **Vector related database dependency required for this**._
 
 Consider a user who has interacted with the system for years, resulting in thousands of chat messages. Sending only the last 20 messages might not provide enough context, especially if the user's question relates to an older message.
 
@@ -256,13 +264,11 @@ We will integrate necessary advisors and chat memory beans into the chat client 
 1.  **Inject Chat Memory Bean:** Inject a bean of type `chatMemory` into the constructor of the class where the chat client bean is created.
 
     ```java
-    @Configuration
-    public class ChatClientConfig {
-
-        @Bean
-        public ChatClient chatClient(ChatMemory chatMemory) {
-            return new ChatClient(chatMemory);
-        }
+    @Bean("chatMemoryChatClient")
+    public ChatClient chatMemoryChatClient(
+        ChatClient.Builder chatClientBuilder, 
+        ChatMemory chatMemory) {
+        // ..
     }
     ```
 
@@ -280,8 +286,8 @@ We will integrate necessary advisors and chat memory beans into the chat client 
 2.  **Message Chat Memory Advisor:** Create an object of `MessageChatMemoryAdvisor`.
 
     ```java
-    MessageChatMemoryAdvisor memoryAdvisor = MessageChatMemoryAdvisor.builder()
-            .chatMemory(chatMemory)
+    Advisor memoryAdvisor = MessageChatMemoryAdvisor
+            .builder(chatMemory)
             .build();
     ```
 
@@ -295,17 +301,33 @@ We will integrate necessary advisors and chat memory beans into the chat client 
 
     ```java
     ChatClient chatClient = ChatClient.builder()
-            .defaultAdvisors(List.of(loggerAdvisor, memoryAdvisor))
+            .defaultAdvisors(
+                List.of(loggerAdvisor, memoryAdvisor)
+            )
             .build();
+    ```
+5. Overall it should look like this:
+    ```java
+    @Bean("chatMemoryChatClient")
+    public ChatClient chatMemoryChatClient(ChatClient.Builder chatClientBuilder, ChatMemory chatMemory) {
+        Advisor loggerAdvisor = new SimpleLoggerAdvisor();
+        Advisor memoryAdvisor = MessageChatMemoryAdvisor
+            .builder(chatMemory)
+            .build();
+        return chatClientBuilder
+        .defaultAdvisors(
+            List.of(loggerAdvisor, memoryAdvisor)
+        ).build();
+    }
     ```
 
 ### Testing the REST API 🧪
 
 1.  **Initial Interaction:** Ask "What is my name?". The API should respond with "I'm sorry, but I don't know your name. How can I assist you today?".
 
-2.  **Provide Name:** Provide your name, e.g., "My name is Madan". The API should respond with "Nice to meet you Madan. How can I assist you today?".
+2.  **Provide Name:** Provide your name, e.g., "My name is Rakesh". The API should respond with "Nice to meet you Madan. How can I assist you today?".
 
-3.  **Subsequent Interaction:** Ask "What is my name?" again. The API should now respond with "Your name is Madan. How can I help you today?".
+3.  **Subsequent Interaction:** Ask "What is my name?" again. The API should now respond with "Your name is Rakesh. How can I help you today?".
 
     This demonstrates that the chat memory is working. The model remembers the previous conversation.
 
@@ -316,7 +338,12 @@ We will integrate necessary advisors and chat memory beans into the chat client 
     📌 **Example:**
     *   User message: "What is my name?"
     *   Assistant message: "I'm sorry, but I don't know your name."
-    *   User message: "My name is Madan."
+    *   User message: "My name is Rakesh."
+
+```log
+request: ChatClientRequest[prompt=Prompt{messages=[UserMessage{content='What is my name?', properties={messageType=USER}, messageType=USER}, AssistantMessage [messageType=ASSISTANT, toolCalls=[], textContent=I'm sorry, but I don't know your name. How can I assist you today?, metadata={role=ASSISTANT, messageType=ASSISTANT, finishReason=STOP, refusal=, index=0, annotations=[], id=chatcmpl-C91ah3EbWZ6snv9scJdnGaibZgbbw}], UserMessage{content='My name is rakesh', properties={messageType=USER}, messageType=USER}, AssistantMessage [messageType=ASSISTANT, toolCalls=[], textContent=Nice to meet you, Rakesh! How can I assist you today?, metadata={role=ASSISTANT, messageType=ASSISTANT, finishReason=STOP, refusal=, index=0, annotations=[], id=chatcmpl-C91awiBe3GC2QXQNZROCoUikh8XI6}], UserMessage{content='What is my name', properties={messageType=USER}, messageType=USER}], modelOptions=OpenAiChatOptions: {"streamUsage":false,"model":"gpt-4o-mini","temperature":0.7}}, context={}]
+```   
+
 
 ### Current Limitations ⚠️
 
@@ -343,7 +370,7 @@ The next step is to solve the problem of the single, default conversation ID by 
 
 ---
 
-## 5. Configuring Conversation ID for REST API
+## 5. Pre-User Memory in LLM - Configuring Conversation ID for REST API
 
 This section explains how to configure a conversation ID for a REST API, ensuring that interactions are unique to each end user. This is crucial for maintaining context and providing personalized experiences.
 
@@ -371,6 +398,15 @@ The client applications will send this username as an input in two ways:
 
 Specifically, the header name will also be **username**. The value associated with this header will be the unique identifier for the user. This ensures that each end user has a unique conversation ID.
 
+```java
+@GetMapping("/chat-memory")
+public ResponseEntity<String> chatMemory(
+    @RequestParam String message, 
+    @RequestHeader String username) { // use @RequestHeader
+        // ...
+}
+```
+
 Here's how to configure the conversation ID:
 
 1.  Invoke the `advisors` method. We'll use the overloaded version that accepts an advisor specification in the form of a consumer lambda expression.
@@ -383,32 +419,41 @@ Here's how to configure the conversation ID:
 
 2.  Inside the lambda expression, invoke the `param` method (singular, not `params`).
 
-3.  Pass the conversation ID key along with the value. To get the conversation ID key, refer to the `chat memory`. There's a constant named `conversation ID` that holds the key value.
+3.  Pass the conversation ID key along with the value. To get the conversation ID key, refer to the `ChatMemory`. There's a constant named `CONVERSATION_ID` that holds the key value.
 
-    📌 **Example:** Instead of directly pasting the value, import the `conversation ID` constant into the controller class.
+    📌 **Example:** Instead of directly pasting the value, import the `CONVERSATION_ID` constant into the controller class:- `import static org.springframework.ai.chat.memory.ChatMemory.CONVERSATION_ID;`
 
-    ```java
-    import com.example.chat.ChatMemoryConstants.conversationID;
-    ```
-
-4.  Use the imported `conversationID` constant as the key in the `param` method. The value will be the username received from the client application.
+4.  Use the imported `CONVERSATION_ID` constant as the key in the `param` method. The value will be the username received from the client application.
 
     ```java
-    advisorSpec.param(conversationID, username);
+    advisorSpec.param(CONVERSATION_ID, username);
     ```
 
     This is the key configuration step. The framework will handle storing and retrieving messages based on this unique conversation ID.
 
 After building, the framework uses a concurrent hash map in the in-memory chat memory repository to store chat messages based on the conversation ID.
 
+```java
+@GetMapping("/chat-memory")
+public ResponseEntity<String> chatMemory(@RequestParam String message, @RequestHeader String username) {
+    return ResponseEntity.ok(chatMemoryChatClient
+        .prompt()
+        .user(message)
+        .advisors(advisorSpec -> 
+            advisorSpec.param(CONVERSATION_ID, username))
+        .call().content());
+}
+```
+
 To test this:
 
 1.  Set a breakpoint inside the `findByConversationID` method in the repository. This allows you to observe the behavior of the framework.
 2.  When invoking the REST API, ensure you send a header with the key `username` and the corresponding username as the value.
 
-    ⚠️ **Warning:** Ensure the username is in the **headers**, not the parameters.
+    ⚠️ **Warning:** Ensure the username is in the **headers**, not the parameters. `curl --location 'http://localhost:8080/api/chat-memory?message=What%20is%20my%20name%3F' \
+--header 'username: madan03'`
 
-    📌 **Example:**
+    📌 **Example:** 
 
     *   Username: `madan01`
     *   Message: `My name is Madan`
@@ -451,7 +496,8 @@ To get started with JDBC, you need to add the following dependencies to your `po
 <!-- Spring AI Starter Chat Memory Repository JDBC -->
 <dependency>
     <groupId>org.springframework.ai</groupId>
-    <artifactId>spring-ai-spring-boot-starter-chat-memory-repository-jdbc</artifactId>
+    <artifactId>spring-ai-starter-model-chat-memory-repository-jdbc</artifactId>
+    <version>1.0.1</version>
 </dependency>
 
 <!-- H2 Database -->
@@ -461,19 +507,17 @@ To get started with JDBC, you need to add the following dependencies to your `po
     <scope>runtime</scope>
 </dependency>
 ```
-
-These dependencies can also be found in the GitHub repository. The first dependency is for the Spring AI JDBC chat memory repository, and the second is for the H2 database. H2 is used to avoid the setup complexity of MySQL or PostgreSQL, but the steps are similar regardless of the database used.
+The first dependency is for the Spring AI JDBC chat memory repository, and the second is for the H2 database. H2 is used to avoid the setup complexity of MySQL or PostgreSQL, but the steps are similar regardless of the database used.
 
 ### Configuring Application Properties
 
 Next, you need to configure the `application.properties` file with properties related to the H2 database:
 
 ```properties
-spring.datasource.url=jdbc:h2:file:~/chatmemory
+spring.datasource.url=jdbc:h2:file:~/chatmemory;AUTO_SERVER=true
 spring.datasource.driverClassName=org.h2.Driver
-spring.datasource.username=modern
+spring.datasource.username=madan
 spring.datasource.password=12345
-spring.jpa.hibernate.ddl-auto=none
 ```
 
 These properties define the URL, driver class name, username, and password for the database.
@@ -488,9 +532,9 @@ On Unix-based systems (like macOS), `~` represents the home directory of the cur
 
 ### Understanding JDBC Chat Memory Repository
 
-After building the project, you should see a class named `JDBCChartMemoryRepository` that implements the `ChartMemoryRepository` interface. This class uses the configured database to store and retrieve chat messages. It uses `JdbcTemplate` to query the database.
+After building the project, you should see a class named `JdbcChatMemoryRepository` that implements the `ChatMemoryRepository` interface. This class uses the configured database to store and retrieve chat messages. It uses `JdbcTemplate` to query the database.
 
-💡 **Tip:** Use this class as a reference if you need to create your own `ChartMemoryRepository` implementation, especially for NoSQL databases like MongoDB, where Spring AI might not provide a default implementation.
+💡 **Tip:** Use this class as a reference if you need to create your own `ChatMemoryRepository` implementation, especially for NoSQL databases like MongoDB, where Spring AI might not provide a default implementation.
 
 ### Troubleshooting Schema Initialization
 
@@ -502,35 +546,48 @@ To resolve this for H2, you need to create the schema file manually.
 
 ### Creating a Custom Schema File
 
-1.  Open the `SQL db dot SQL` file from the Spring AI library (you can find it within the `JDBC` package).
+1.  Open the `schema-hsqldb.sql` file from the Spring AI library (you can find it within the `JDBC` package).
 2.  Copy the SQL scripts from this file. These scripts create a table named `spring_underscore_chart_underscore_memory` with columns for conversation ID, content, type, and timestamp. They also create an index and add a constraint on the type column.
 3.  Create a new directory named `schema` under the `resources` folder in your project.
-4.  Inside the `schema` directory, create a new file named `schema-h2.sql`.
-5.  Paste the copied SQL scripts into `schema-h2.sql`.
+
+```sql
+CREATE TABLE SPRING_AI_CHAT_MEMORY (
+    conversation_id VARCHAR(36) NOT NULL,
+    content LONGVARCHAR NOT NULL,
+    type VARCHAR(10) NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE INDEX SPRING_AI_CHAT_MEMORY_CONVERSATION_ID_TIMESTAMP_IDX ON SPRING_AI_CHAT_MEMORY(conversation_id, timestamp DESC);
+
+ALTER TABLE SPRING_AI_CHAT_MEMORY ADD CONSTRAINT TYPE_CHECK CHECK (type IN ('USER', 'ASSISTANT', 'SYSTEM', 'TOOL'));
+```
+
+4.  Inside the `schema` directory, create a new file named `schema-h2db.sql`.
+5.  Paste the copied SQL scripts into `schema-h2db.sql`.
 
 ### Configuring Schema Initialization Properties
 
 To tell the framework to use your custom schema file, add the following properties to your `application.properties` file:
 
 ```properties
-spring.ai.chat.memory.repository.jdbc.schema-location=classpath:schema/schema-h2.sql
-spring.jpa.hibernate.ddl-auto=none
+spring.ai.chat.memory.repository.jdbc.initialize-schema=always
+spring.ai.chat.memory.repository.jdbc.schema=classpath:/schema/schema-h2db.sql
 ```
 
-*   `spring.ai.chat.memory.repository.jdbc.schema-location`: Specifies the location of the schema file. In this case, it's `classpath:schema/schema-h2.sql`, which means the file is located in the `schema` directory under the classpath (resources folder).
-*   `spring.jpa.hibernate.ddl-auto=none`: Disables automatic schema generation by JPA/Hibernate, as we are providing our own schema.
+*   `spring.ai.chat.memory.repository.jdbc.schema`: Specifies the location of the schema file. In this case, it's `classpath:/schema/schema-h2.sql`, which means the file is located in the `schema` directory under the classpath (resources folder).
 
 The `spring.ai.chat.memory` properties control how the schema is initialized. The default value for schema initialization is `embedded`, which means the schema is initialized automatically for embedded databases like H2. For other databases like MySQL or PostgreSQL, you can either create the tables manually or set the initialization to `always` to have the framework execute the schema scripts.
 
 ### Accessing the H2 Console
 
-You can access the H2 database console to validate the schema and data. The console is available at the path `H2 hyphen console`.
+You can access the H2 database console to validate the schema and data. The console is available at the path `http://localhost:8080/h2-console/`.
 
 To connect to the database, provide the following details:
 
 *   Driver Class: `org.h2.Driver`
-*   JDBC URL: (The URL from your `application.properties` file)
-*   User Name: `modern`
+*   JDBC URL: `jdbc:h2:file:~/chatmemory`
+*   User Name: `madan`
 *   Password: `12345`
 
 After connecting, you can execute SQL queries to inspect the database.
@@ -540,17 +597,16 @@ After connecting, you can execute SQL queries to inspect the database.
 You might encounter an error related to the `timestamp` column. This is because `timestamp` is a reserved keyword in some SQL dialects. To fix this, surround the `timestamp` column name with double quotes in your `schema-h2.sql` file:
 
 ```sql
-CREATE TABLE spring_underscore_chart_underscore_memory (
-    conversation_id VARCHAR(255) NOT NULL,
-    content TEXT,
-    type VARCHAR(50),
-    "timestamp" BIGINT NOT NULL,
-    PRIMARY KEY (conversation_id, "timestamp")
+CREATE TABLE SPRING_AI_CHAT_MEMORY (
+    conversation_id VARCHAR(36) NOT NULL,
+    content LONGVARCHAR NOT NULL,
+    type VARCHAR(10) NOT NULL,
+    "timestamp" TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-CREATE INDEX idx_spring_chart_memory ON spring_underscore_chart_underscore_memory (conversation_id, "timestamp");
+CREATE INDEX SPRING_AI_CHAT_MEMORY_CONVERSATION_ID_TIMESTAMP_IDX ON SPRING_AI_CHAT_MEMORY(conversation_id, "timestamp" DESC);
 
-ALTER TABLE spring_underscore_chart_underscore_memory ADD CONSTRAINT CHK_TYPE CHECK (type IN ('USER', 'ASSISTANT', 'SYSTEM', 'TOOL'));
+ALTER TABLE SPRING_AI_CHAT_MEMORY ADD CONSTRAINT TYPE_CHECK CHECK (type IN ('USER', 'ASSISTANT', 'SYSTEM', 'TOOL'));
 ```
 
 💡 **Tip:** This is a good example of how you can contribute to open-source projects. You can propose these kinds of changes to the framework developers.
@@ -565,9 +621,9 @@ Each time you initiate a new request, the chat memory functionality loads all me
 
 ---
 
-## 7. Customizing Chat Memory Bean Configuration
+## 7. Customizing Chat Memory Bean Configuration - Using maxMessages to Limit Chat History in Spring AI
 
-When integrating our application with the JDBC chat memory repository, the initial bean configurations worked without modification. This is because the framework intelligently avoids creating the in-memory chat memory repository bean if the JDBC chat memory repository class is available in the classpath. The framework injects the JDBC chat memory repository bean when a bean of type chat memory repository is required.
+When integrating our application with the JDBC chat memory repository, the initial bean configurations worked without modification. This is because the framework intelligently avoids creating the `InMemoryChatMemoryRepository` bean if the `JdbcChatMemoryRepository` class is available in the classpath. The framework injects the JDBC chat memory repository bean when a bean of type chat memory repository is required.
 
 However, you might need to customize the default behavior of the Spring framework. 📌 **Example:** You might want to change the number of messages used by the `MessageWindowChatMemory` implementation when populating the chat messages for the LLM. By default, it uses a maximum of 20 messages.
 
@@ -613,23 +669,13 @@ To process chat messages into a database using JDBC:
 1.  Add the required Maven dependencies.
 2.  Leverage the built-in implementation class named `JdbcChatMemoryRepository`.
 
-Similarly, if you add dependencies for Neo4j or Cassandra, Spring provides corresponding implementation classes: `Neo4jChatMemoryRepository` and `CassandraChatMemoryRepository`.
+Similarly, if you add dependencies for Neo4j and Cassandra, Spring provides corresponding implementation classes: `Neo4jChatMemoryRepository` and `CassandraChatMemoryRepository`.
 
 📝 **Note:** Always check the official Spring documentation first when storing chat messages in a specific database or storage system. If the documentation mentions your database, you can use the default implementation classes provided by the framework. Otherwise, you can create your own implementation.
 
-### Custom Chat Memory Bean Configuration
-
-To define your own chat memory bean with custom configurations like `maxMessages`, you need to create a bean definition and use the builder pattern as shown above.
-
-### H2 Database Configuration
-
-The following properties are used to configure the H2 database to store chat message details:
-
-*   (Properties were not explicitly listed in the original transcript, but would be listed here if they were)
-
 ---
 
-## 8. Understanding Max Messages and Context Window Size in LM Models
+## 8. Understanding Max Messages and Context Window Size in LM Models - Avoiding Token Overload
 
 As a developer, you might be tempted to configure a large number for max messages (e.g., 1000) to enhance the user experience. However, this decision requires careful consideration due to its implications on context window size and cost.
 
@@ -667,8 +713,7 @@ When integrating chat memory functionality in a Spring application, follow these
 
     ```java
     // Example of setting max tokens (hypothetical)
-    ChatOptions options = new ChatOptions();
-    options.setMaxTokens(1000);
+    ChatOptions options = ChatOptions.builder().model("gpt-4.1-mini").maxTokens(1000).build();
     ```
 
     This ensures requests and responses don't exceed the configured token limit.

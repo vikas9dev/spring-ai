@@ -1,5 +1,4 @@
-# 03 Foundations Of Generative Ai And Llms
-
+# Foundations Of Generative AI And LLMS
 
 Sections-
 1. [Understanding Generative AI and Language Models](#1-understanding-generative-ai-and-language-models)
@@ -15,7 +14,6 @@ Sections-
 11. [Understanding Token Relationships and Embeddings in Language Models](#11-understanding-token-relationships-and-embeddings-in-language-models)
 12. [Understanding Positional Encoding in Transformer Models](#12-understanding-positional-encoding-in-transformer-models)
 13. [Understanding the Attention Layer in Language Models](#13-understanding-the-attention-layer-in-language-models)
-
 
 ---
 
@@ -52,6 +50,8 @@ Generative AI is part of a larger family of technologies that help computers thi
 *   Natural Language Processing (NLP)
 *   Large Language Models (LLMs)
 
+![Journey to Generative AI](img/journey-to-generative-ai.png)
+
 Let's look at how these technologies evolved:
 
 1.  **1950s:** Artificial Intelligence (AI) emerged as a computer science field.
@@ -69,6 +69,8 @@ Here's another way to visualize this family tree:
     *   **Image Generation Models:** Create images. 🖼️
     *   **Video Generation Models:** Create videos. 🎬
     *   **Code Generation Models:** Create code. 💻
+
+![Generative AI Family Tree](img/generative-ai-family-tree.png)
 
 Parallel to this evolution, other major fields have also developed:
 
@@ -89,7 +91,7 @@ This section provides a breakdown of the core technologies within the generative
 *   The aim is to enable machines to think, learn, solve problems, and make decisions like humans.
 *   Essentially, it's about giving machines a "brain" capable of reasoning and decision-making.
 *   📌 **Example:** Siri, Google Assistant, and self-driving cars are all products evolved from AI research.
-*   AI is the overarching term for all smart computer systems, sitting at the top of the family tree.
+*   AI is the umbrella/overarching term for all smart computer systems, sitting at the top of the family tree. 
 *   📝 **Note:** It's best to use the generic term "artificial intelligence" when explaining these concepts to people unfamiliar with the field to avoid confusion with jargon like "generative AI," "deep learning," and "machine learning."
 
 ### Machine Learning (ML) 🤖
@@ -121,18 +123,49 @@ This section provides a breakdown of the core technologies within the generative
     2.  Layer 2: Combines lines to see shapes.
     3.  Layer 3: Combines shapes to recognize objects.
 *   Similarly, for text:
-    *   Lower layers learn grammar.
-    *   Middle layers learn word relationships (📌 **Example:** understanding the different meanings of "bank").
-    *   Higher layers learn meaning and intent, including sentiment.
+    *   Lower layers learn grammar (e.g. "I am" vs "He is").
+    *   Middle layers learn word relationships (📌 **Example:** understanding the different meanings of "bank" = "river bank" or "money bank"?).
+    *   Higher layers learn meaning and intent, including sentiment. (Example: "I am happy with the service" = "happy" or "sad"?, or topic=sports/news)
+
+**How Neural Networks (NN) Fit in?**
+
 *   The building blocks of deep learning are neural networks, designed to work like brain cells.
 *   Each artificial neuron receives information, processes it, and passes it on to the next layer.
 *   Neural networks are interconnected, with each connection having different strengths.
 *   They excel at finding patterns that humans might miss and improve with more data and practice.
 
+**Why They Matter:** 
+
+* They are the foundation that makes Deep Learning possible.
+* They can find patterns humans might miss.
+* They get better with more data and practice.
+
 ### Natural Language Processing (NLP) 🗣️
 
 *   NLP is a field of AI that helps machines understand and work with human language (reading, writing, and talking).
 *   NLP enables communication with AI products like Siri, Google Assistant, and ChatGPT.
+
+💬 **What is NLP (Natural Language Processing)?**
+
+NLP is a branch of AI that helps machines understand and work with human language — reading, writing, and talking.
+
+* The technology that helps computers understand and work with human language
+* Bridges the gap between how humans communicate and how computers process information
+* Makes it possible for us to talk to computers naturally
+
+**Key Capabilities:**
+
+* Understanding: What does this sentence mean?
+* Generation: How do I express this idea in words?
+* Translation: How do I say this in another language?
+* Sentiment: Is this comment positive or negative?
+
+**Daily Examples:**
+
+* Voice assistants understanding your questions
+* Email auto-complete suggestions
+* Language translation apps
+* Chatbots on websites
 
 ### Generative AI ✨
 
@@ -141,9 +174,9 @@ This section provides a breakdown of the core technologies within the generative
 *   It learns from many examples (drawings, songs, stories) and uses this information to create something original.
 *   Generative AI is a broad category of creative AI.
 *   Sub-technologies include:
-    *   Large Language Models (LLMs) for text generation ✍️
-    *   Image generators like DALL-E for image creation 🖼️
-    *   Models for music generation 🎵, video generation 🎬, and code generation 💻.
+    *   Large Language Models (LLMs) like ChatGPT, Claude for text generation ✍️
+    *   Image generators like DALL-E, MidJourney for image creation 🖼️
+    *   Models for music generation 🎵, video generation 🎬 (like Runway, Sora), and code generation 💻 (like GitHub Copilot).
 
 ### Analogy: The Robot Chef 🧑‍🍳
 
@@ -258,6 +291,8 @@ From the next lecture, we will focus on LLMs because they are extensively used i
 
 Let's briefly explore how diffusion models generate images, videos, or other data. Diffusion models use a specific technique:
 
+![diffusion process](img/diffusion-process.png)
+
 1.  **Training:** The models are trained on a large dataset of images.
     📌 **Example:** A dog image.
 2.  **Adding Noise:** During training, the model progressively adds noise (pixel data) to the original image.
@@ -273,7 +308,7 @@ I hope you now have a basic understanding of how diffusion models generate image
 
 ---
 
-## 5. Introduction to Large Language Models (LLMs)
+## 5. Introduction to Large Language Models (LLMs) - The Text Experts
 
 Let's dive into the world of Large Language Models (LLMs)! 🤖
 
@@ -303,7 +338,7 @@ To give you an idea of the scale of these models:
 
 *   The GPT-4 LLM model, used by ChatGPT, is trained on 1 to 2 trillion tokens, which is roughly 300 to 500 billion words. 🤯
 *   This is equivalent to reading over 1 million books or nearly the entire internet's text content.
-*   GPT-4 may have used 10,000 to 25,000 GPUs provided by Nvidia.
+*   GPT-4 may have used 10,000 to 25,000 GPUs provided by Nvidia (NVIDIA A100 or H100).
 
 The capacity of LLMs is increasing so rapidly that we may soon face a shortage of publicly available internet data to train them. ⚠️
 

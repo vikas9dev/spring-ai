@@ -1,4 +1,4 @@
-# 02 Spring AI Essentials   Prompts, Advisors, And Structured Responses
+# Spring AI Essentials - Prompts, Advisors, And Structured Responses
 
 Sections-
 1. [Understanding Message Roles in LLMs](#1-understanding-message-roles-in-llms)
