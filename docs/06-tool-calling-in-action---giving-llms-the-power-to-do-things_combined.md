@@ -2,16 +2,32 @@
 
 
 Sections-
-1. [Tool Calling in Generative AI](#1-tool-calling-in-generative-ai)
-2. [Building a REST API to Query Current Time with LLM](#2-building-a-rest-api-to-query-current-time-with-llm)
-3. [Implementing Tools Calling in Spring Boot](#3-implementing-tools-calling-in-spring-boot)
-4. [Understanding How Language Models Call Tools](#4-understanding-how-language-models-call-tools)
-5. [Building an AI Assistant for Technical Issue Reporting](#5-building-an-ai-assistant-for-technical-issue-reporting)
-6. [Building the Help Desk Chat Client and Tools](#6-building-the-help-desk-chat-client-and-tools)
-7. [Exploring Tool Calling with Language Models](#7-exploring-tool-calling-with-language-models)
-8. [Using Return Direct for Tool Execution](#8-using-return-direct-for-tool-execution)
-9. [Handling Runtime Exceptions in Tools](#9-handling-runtime-exceptions-in-tools)
-10. [The Generative AI Journey: From LLMs to Agentic AI](#10-the-generative-ai-journey-from-llms-to-agentic-ai)
+- [06 Tool Calling In Action   Giving Llms The Power To Do Things](#06-tool-calling-in-action---giving-llms-the-power-to-do-things)
+  - [1. Tool Calling in Generative AI](#1-tool-calling-in-generative-ai)
+    - [Tool Calling vs. RAG](#tool-calling-vs-rag)
+  - [2. Building a REST API to Query Current Time with LLM](#2-building-a-rest-api-to-query-current-time-with-llm)
+  - [3. Implementing Tools Calling in Spring Boot](#3-implementing-tools-calling-in-spring-boot)
+  - [4. Understanding How Language Models Call Tools](#4-understanding-how-language-models-call-tools)
+    - [Demo and Code Walkthrough](#demo-and-code-walkthrough)
+  - [5. Building an AI Assistant for Technical Issue Reporting](#5-building-an-ai-assistant-for-technical-issue-reporting)
+    - [Setting Up Dependencies](#setting-up-dependencies)
+    - [Creating the Entity](#creating-the-entity)
+    - [Creating the Repository](#creating-the-repository)
+    - [Creating the Service](#creating-the-service)
+    - [Creating the Model](#creating-the-model)
+  - [6. Building the Help Desk Chat Client and Tools](#6-building-the-help-desk-chat-client-and-tools)
+    - [Creating a New Chat Client](#creating-a-new-chat-client)
+    - [Adding a System Message](#adding-a-system-message)
+    - [Building the Help Desk Tools](#building-the-help-desk-tools)
+    - [Creating the REST API Controller](#creating-the-rest-api-controller)
+  - [7. Exploring Tool Calling with Language Models](#7-exploring-tool-calling-with-language-models)
+  - [8. Using Return Direct for Tool Execution](#8-using-return-direct-for-tool-execution)
+    - [When to Use `Return Direct` 🤔](#when-to-use-return-direct-)
+    - [How to Configure `Return Direct` ⚙️](#how-to-configure-return-direct-️)
+    - [Behind the Scenes 🕵️‍♀️](#behind-the-scenes-️️)
+    - [Demonstration 🎬](#demonstration-)
+  - [9. Handling Runtime Exceptions in Tools](#9-handling-runtime-exceptions-in-tools)
+  - [10. The Generative AI Journey: From LLMs to Agentic AI](#10-the-generative-ai-journey-from-llms-to-agentic-ai)
 
 
 ---
@@ -55,6 +71,8 @@ Beyond retrieving real-time data, tool calling enables LLMs to perform actions, 
 
 These actions are defined within the Java methods associated with the tools.
 
+![Tool Calling in Generative AI](/docs/img/tool-calling-in-generative-ai.png)
+
 Tool calling provides LLMs with two key superpowers:
 
 1.  **Information Retrieval:** The ability to fetch real-time data from external systems like databases or APIs. Think of it as googling the latest cricket score.
@@ -67,8 +85,6 @@ It's important to distinguish tool calling from Retrieval-Augmented Generation (
 *   **Tool Calling:** Like calling a plumber to fix a leak. The LLM requests an external system (the Spring AI application) to perform an action.
 *   **RAG:** Like reading a "do it yourself" manual to fix the leak yourself. The LLM retrieves information and generates a response based on that information, but it doesn't perform actions.
 
-| Feature         | Tool Calling
-
 ---
 
 ## 2. Building a REST API to Query Current Time with LLM
@@ -79,27 +95,23 @@ First, we create a new controller named `TimeController`.
 
 1.  Create a new class `TimeController` inside the `controller` package.
 2.  Create a dedicated chat client configuration for this controller. Copy the existing `ChatMemoryChatClientConfig` and rename it to `TimeChatClientConfig`.
-
-    ```java
-    // TimeChatClientConfig.java
-    @Configuration
-    public class TimeChatClientConfig {
-
-        @Bean
-        public ChatClient timeChatClient(AiClient aiClient,
-                                       PromptTemplate promptTemplate,
-                                       @Qualifier("tokenCountAdvisor") AiClientStreamInterceptor tokenCountAdvisor,
-                                       @Qualifier("userLoggerAdvisor") AiClientStreamInterceptor userLoggerAdvisor,
-                                       @Qualifier("memoryAdvisor") AiClientStreamInterceptor memoryAdvisor) {
-            return new ChatClient(aiClient, promptTemplate, List.of(tokenCountAdvisor, userLoggerAdvisor, memoryAdvisor));
-        }
-    }
-    ```
-
 3.  Remove unnecessary configurations (chat memory, RAG-related configurations, advisor) from `TimeChatClientConfig`, focusing solely on tool calling.
 4.  Rename the chat client bean to `timeChatClient`.
 5.  Inject necessary advisors like `loggerAdvisor`, `tokenUserAdvisor`, and `memoryAdvisor`.
 
+    ```java
+    @Configuration
+    public class TimeChatClientConfig {
+
+        @Bean("timeChatClient")
+        public ChatClient timeChatClient(ChatClient.Builder chatClientBuilder, ChatMemory chatMemory) {
+            Advisor loggerAdvisor = new SimpleLoggerAdvisor();
+            Advisor memoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory).build();
+            Advisor tokenUsageAdvisor = new TokenUsageAuditAdvisor();
+            return chatClientBuilder.defaultAdvisors(List.of(loggerAdvisor, memoryAdvisor, tokenUsageAdvisor)).build();
+        }
+    }
+    ```
 Next, configure the `TimeController`.
 
 1.  Add necessary annotations to the `TimeController`: `@RestController` and `@RequestMapping("/api/tools")`.
@@ -108,33 +120,29 @@ Next, configure the `TimeController`.
     ```java
     @RestController
     @RequestMapping("/api/tools")
+    @RequiredArgsConstructor
     public class TimeController {
-
-        private final ChatClient chatClient;
-
-        public TimeController(@Qualifier("timeChatClient") ChatClient chatClient) {
-            this.chatClient = chatClient;
-        }
-
-        // ... rest of the code
+        private final ChatClient timeChatClient;
     }
     ```
-
-3.  Ensure the `@Qualifier` annotation specifies the correct bean name (`timeChatClient`).
 
 Now, create a simple REST API endpoint.
 
 1.  Add a new REST API endpoint `/local-time` that accepts a user message and forwards it to the LLM. The LLM's response is then returned as output.
 
     ```java
-    @PostMapping("/local-time")
-    public String localTime(@RequestBody String message) {
-        return chatClient.call(message);
+    @GetMapping("/local-time")
+    public ResponseEntity<String> localTime(
+        @RequestParam String message, 
+        @RequestHeader String username) {
+        return ResponseEntity.ok(
+            timeChatClient.prompt()
+            .advisors(a -> a.param(CONVERSATION_ID, username))
+            .user(message).call().content()
+        );
     }
     ```
-
-2.  The method name is `localTime`.
-3.  Initially, no system prompt is configured, allowing any question to be asked. However, the intention is to restrict questions to the current time.
+2.  Initially, no system prompt is configured, allowing any question to be asked. However, the intention is to restrict questions to the current time.
 
 Build and run the application.
 
@@ -142,7 +150,8 @@ Build and run the application.
 2.  ⚠️ **Warning:** Ensure Docker Desktop is running in the background. This is required due to RAG-related configurations from previous sections, which set up a new Quadrant container on application startup. If you don't need these configurations, you can remove them.
 3.  Start the Spring Boot application.
 
-Test the API endpoint using Postman.
+Test the API endpoint using Postman:- `curl --location 'http://localhost:8080/api/tools/local-time?message=What%20is%20the%20current%20time%20in%20London%20%3F' \
+--header 'username: testUser19'`
 
 1.  Invoke the `/api/tools/local-time` endpoint with a message like "What is the current time in Hyderabad, India?".
 2.  Observe the response from the LLM. It should indicate that the LLM lacks real-time capabilities and cannot provide the current time.
@@ -186,7 +195,8 @@ import java.time.LocalTime;
 @Component
 public class TimeTools {
 
-    private static final Logger logger = LoggerFactory.getLogger(TimeTools.class);
+    private static final Logger log = LoggerFactory.getLogger(TimeTools.class); 
+    // or use lombok @Slf4j 
 
     // Method implementation will be added below
 }
@@ -197,15 +207,15 @@ Let's name the method `getCurrentLocalTime`. It won't accept any input. Inside t
 Now, write the logic to return the current local time. Use the `LocalTime` class in Java to get the local time.
 
 ```java
-    @org.springframework.ai.tool.Tool(name = "getCurrentLocalTime", description = "Get the current time in the user's time zone")
-    public String getCurrentLocalTime() {
-        logger.info("Returning the current time in the user's time zone.");
-        LocalTime currentTime = LocalTime.now();
-        return currentTime.toString();
-    }
+@Tool(
+    name = "getCurrentLocalTime",
+    description = "Returns the current time in the user's time zone"
+)
+public String getCurrentLocalTime() {
+    log.info("Returning the current time in the user's time zone");
+    return LocalDateTime.now().toString();
+}
 ```
-
-The output from this statement will be returned from the method. Now you have a Java method ready to return the current local time.
 
 Annotate the method with `@Tool`. This is a special annotation from the Spring AI team. Use this annotation when you want to expose the logic of a Java method as a tool.
 
@@ -215,90 +225,31 @@ The first piece of information to provide is the `name` of the tool. This name c
 
 After the `name`, provide a `description` of the tool. This description is very important because the LM model uses it to understand when to invoke the tool.
 
-📌 **Example:**
-```java
-@org.springframework.ai.tool.Tool(name = "getCurrentLocalTime", description = "Get the current time in the user's time zone")
-public String getCurrentLocalTime() {
-    // ... implementation ...
-}
-```
+With this, we have successfully created a tool.
 
-With this, you have successfully created a tool.
-
-Now, configure this tool into your chat client bean. Go to the `ChatClientConfig` class.
+Now, configure this tool into your chat client bean. Go to the `timeChatClient` class.
 
 Similar to how advisors are injected, there's a default method to inject tools. The method name is `defaultTools`. Provide the bean where you defined all your tools to this `defaultTools` method.
 
 First, inject the bean into this method. You know you just have to type `timeTools`. This `timeTools` bean needs to be provided as an input to these `defaultTools`.
 
 ```java
-import org.springframework.ai.chat.ChatClient;
-import org.springframework.ai.autoconfigure.AiProperties;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.ai.embedding.EmbeddingClient;
-import org.springframework.ai.vectorstore.PgVectorStore;
-import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.jdbc.core.JdbcTemplate;
+@Bean("timeChatClient")
+public ChatClient timeChatClient(ChatClient.Builder chatClientBuilder,
+        ChatMemory chatMemory,
+        TimeTools timeTools) { // provide the bean
+    Advisor loggerAdvisor = new SimpleLoggerAdvisor();
+    Advisor memoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory).build();
+    Advisor tokenUsageAdvisor = new TokenUsageAuditAdvisor();
 
-@Configuration
-public class ChatClientConfig {
-
-    @Bean
-    public VectorStore vectorStore(EmbeddingClient embeddingClient, JdbcTemplate jdbcTemplate) {
-        return new PgVectorStore(jdbcTemplate, embeddingClient);
-    }
-
-    @Bean
-    public ChatClient chatClient(AiProperties aiProperties) {
-        return new org.springframework.ai.openai.OpenAiChatClient(aiProperties.getOpenai().getApiKey());
-    }
-
-    @Bean
-    public TimeTools timeTools() {
-        return new TimeTools();
-    }
-
-    @Bean
-    public org.springframework.ai.chat.prompt.PromptTemplate defaultPromptTemplate(@Value("classpath:/prompts/default-prompt.st") org.springframework.core.io.Resource defaultPromptTemplateResource) {
-        return new org.springframework.ai.chat.prompt.PromptTemplate(defaultPromptTemplateResource);
-    }
-
-    @Bean
-    public org.springframework.ai.chat.prompt.PromptTemplate qaPromptTemplate(@Value("classpath:/prompts/qa-prompt.st") org.springframework.core.io.Resource qaPromptTemplateResource) {
-        return new org.springframework.ai.chat.prompt.PromptTemplate(qaPromptTemplateResource);
-    }
-
-    @Bean
-    public org.springframework.ai.chat.prompt.PromptTemplate systemPromptTemplate(@Value("classpath:/prompts/system-prompt.st") org.springframework.core.io.Resource systemPromptTemplateResource) {
-        return new org.springframework.ai.chat.prompt.PromptTemplate(systemPromptTemplateResource);
-    }
-
-    @Bean
-    public org.springframework.ai.chat.prompt.PromptTemplate userPromptTemplate(@Value("classpath:/prompts/user-prompt.st") org.springframework.core.io.Resource userPromptTemplateResource) {
-        return new org.springframework.ai.chat.prompt.PromptTemplate(userPromptTemplateResource);
-    }
-
-    @Bean
-    public org.springframework.ai.chat.prompt.PromptTemplate assistantPromptTemplate(@Value("classpath:/prompts/assistant-prompt.st") org.springframework.core.io.Resource assistantPromptTemplateResource) {
-        return new org.springframework.ai.chat.prompt.PromptTemplate(assistantPromptTemplateResource);
-    }
-
-    @Bean
-    public org.springframework.ai.chat.prompt.PromptTemplate conversationPromptTemplate(@Value("classpath:/prompts/conversation-prompt.st") org.springframework.core.io.Resource conversationPromptTemplateResource) {
-        return new org.springframework.ai.chat.prompt.PromptTemplate(conversationPromptTemplateResource);
-    }
-
-    @Bean
-    public java.util.List<org.springframework.ai.advisor.AiAdvisor> defaultAiAdvisors(ChatClient chatClient, EmbeddingClient embeddingClient, VectorStore vectorStore) {
-        return java.util.Arrays.asList(new org.springframework.ai.advisor.vectorstore.VectorStoreAdvisor(chatClient, embeddingClient, vectorStore));
-    }
-
-    @Bean
-    public java.util.List<org.springframework.ai.tool.Tool> defaultTools(TimeTools timeTools) {
-        return java.util.Arrays.asList(timeTools);
-    }
+    return chatClientBuilder
+            .defaultTools(timeTools) // inject the bean
+            .defaultAdvisors(List.of(
+                    loggerAdvisor,
+                    memoryAdvisor,
+                    tokenUsageAdvisor
+            ))
+            .build();
 }
 ```
 
@@ -308,7 +259,8 @@ Save the changes and build the project.
 
 Once the build is completed, restart the application because the dependency of dev tools has been removed.
 
-Invoke the same REST API, but ask the question: "What is the current time in my location?". Don't give any city name.
+Invoke the same REST API, but ask the question: "What is the current time in my location?". Don't give any city name. `curl --location 'http://localhost:8080/api/tools/local-time?message=What%20is%20the%20current%20time%20in%20my%20location%3F' \
+--header 'username: testUser19'`
 
 Another tool will be built in a few minutes that is capable of providing the time of any time zone. For now, the developed tool can only provide the time from the location where the code is being executed.
 
@@ -322,19 +274,38 @@ How this works internally will be discussed in detail later.
 
 It is assumed that you are clear on how tool calling provides real-time information to the LM models.
 
-Let's create one more tool that is capable of providing the time of any location.
+Let's create one more tool that is capable of providing the time of any location. This is very similar to the top method that was discussed.
 
-Paste a method here. You can get this method from the GitHub repo. This is very similar to the top method that was discussed.
+```java
+@Tool(
+    name = "getCurrentTime",
+    description = "Returns the current time in the specified time zone"
+)
+public String getCurrentTime(
+        @ToolParam(description = "Value representing the time zone")
+        String timeZone
+) {
+    log.info("Returning the current time in timezone: {}", timeZone);
+    return LocalDateTime.now(ZoneId.of(timeZone)).toString();
+}
+```
 
 For the second method, the name `getCurrentTime` has been given, and the same name has been provided for the tool as well under the tool description. This time, the description is: "Get the current time in the specified time zone."
 
-Inside the
+The @ToolParam annotation is used to provide the description of the parameter. In this case, the description is: "Value representing the time zone.". LLMs will use this description to understand the purpose of the parameter, and provide the correct value for the parameter.
+
+Save the changes and build the project. Call the API with questions "What is the current time in Osaka?":- `curl --location 'http://localhost:8080/api/tools/local-time?message=What%20is%20the%20current%20time%20in%20Osaka%3F' \
+--header 'username: test19'`
+
+Check the log message, it should say: "Returning the current time in timezone: Asia/Tokyo".
 
 ---
 
 ## 4. Understanding How Language Models Call Tools
 
 Let's explore how Language Models (LMs) interact with tools. It might seem like Spring is directly exposing our tool logic as an endpoint for OpenAI, but that's not the case. Instead, a conversation takes place between our Spring application and the LM.
+
+![How Language Models Call Tools](/docs/img/How_Language_Models_Call_Tools.png)
 
 Here's a breakdown of the flow when tools are involved:
 
@@ -360,6 +331,8 @@ Here's another way to visualize the tool execution:
 *   **Spring AI Framework:** Our Spring AI code.
 *   **Tool Calling Manager:** An interface within the Spring AI framework responsible for invoking tools based on LM instructions.
 
+![Tool Execution Flow](/docs/img/Tool_Execution_Flow.png)
+
 The flow is as follows:
 
 1.  The chat request, including the prompt and tool definitions, is sent to the LM. The framework extracts tool details (definitions, names) from the classes where the tool methods are defined.
@@ -376,9 +349,10 @@ Let's look at a demo to clarify the process.
 
 First, we'll invoke a REST API *without* tool calling.
 
-📌 **Example:** Asking "Tell me about notice period" returns "The minimum notice period for resignation is 36 days."
+📌 **Example:** Asking "Tell me about notice period" returns "The minimum notice period for resignation is 36 days." `curl --location 'http://localhost:8080/api/rag/document/chat?message=What%20are%20the%20working%20hours%3F' \
+--header 'username: testUser12'`
 
-In the console logs, the response from the LM has `finish_reason: stop`. This is because the LM could answer the question directly using the provided document information, without needing any tools.
+In the console logs, the response from the LM has `finishReason: STOP` inside the `result` -> `metadata`. This is because the LM could answer the question directly using the provided document information, without needing any tools.
 
 Now, let's examine the tool calling scenario.
 
@@ -468,15 +442,8 @@ Next, create an `entity` package and a `HelpDeskTicket` class, which will be a P
 📌 **Example:**
 
 ```java
-package com.example.entity;
-
-import jakarta.persistence.*;
-import lombok.*;
-
-import java.time.LocalDateTime;
-
 @Entity
-@Table(name = "help_desk_tickets")
+@Table(name = "helpdesk_tickets")
 @Getter
 @Setter
 @Builder
@@ -496,12 +463,11 @@ public class HelpDeskTicket {
 }
 ```
 
-📝 **Note:** This assumes familiarity with Spring Data JPA concepts. If you're new to Spring Boot, consider reviewing a Spring Boot course first.
 
 Annotations used:
 
 *   `@Entity`: Marks the class as a JPA entity.
-*   `@Table(name = "help_desk_tickets")`: Specifies the database table name.
+*   `@Table(name = "helpdesk_tickets")`: Specifies the database table name.
 *   `@Getter`, `@Setter`, `@Builder`, `@NoArgsConstructor`, `@AllArgsConstructor`: Lombok annotations for generating boilerplate code.
 
 The class contains fields like:
@@ -528,19 +494,12 @@ Create a `repository` package and a `HelpDeskTicketRepository` interface.
 📌 **Example:**
 
 ```java
-package com.example.repository;
-
-import com.example.entity.HelpDeskTicket;
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.util.List;
-
 public interface HelpDeskTicketRepository extends JpaRepository<HelpDeskTicket, Long> {
     List<HelpDeskTicket> findByUsername(String username);
 }
 ```
 
-This interface extends `JpaRepository` to provide CRUD operations. We also define a derived query method, `findByUsername`, which will query the `help_desk_tickets` table based on the username.
+This interface extends `JpaRepository` to provide CRUD operations. We also define a derived query method, `findByUsername`, which will query the `helpdesk_tickets` table based on the username.
 
 ### Creating the Service
 
@@ -597,7 +556,7 @@ We define two methods:
 
 ### Creating the Model
 
-Create a `model` package and a `TicketRequest` record.
+Inside the `model` package, create a `TicketRequest` record.
 
 📌 **Example:**
 
@@ -639,13 +598,13 @@ This section details the process of creating a dedicated chat client and associa
 3.  Rename the class to `HelpDeskChartClientConfig`.
 4.  Name the bin `helpDeskChartClient`.
     📝 **Note:** A separate chat client bin is created for the help desk to provide a specific system prompt message tailored to this scenario.
-5.  Inject the existing time tools under the default tools.
-6.  Inject new tools for database interactions directly using the `tools` method.
+5.  It has the same configuration as the timeChatClient => Injected the existing time tools under the default tools.
+6.  We will inject new tools for database interactions directly using the `tools` method.
 
 ### Adding a System Message
 
-1.  Create a new prompt template file named `HelpdeskSystemPromptTemplate` under the `Resources/Prompt Templates` folder.
-2.  Add the following system message to the template file:
+1.  Create a new prompt template file named `HelpdeskSystemPromptTemplate` under the `resources/prompt- templates` folder.
+2.  Add the following system message to the template file (`helpDeskSystemPromptTemplate.st`):
 
     ```text
     You are a virtual help desk assistant for Easy Bytes, responsible for assisting employees and customers with their issues.
@@ -661,6 +620,21 @@ This section details the process of creating a dedicated chat client and associa
 3.  Inject the system prompt into the `HelpDeskChartClientConfig`.
     *   Read the message from the template file into the Java class using `@Value` annotation and `@Resource`.
     *   Pass the `systemPromptTemplate` variable as an input to the `defaultSystem` method.
+
+```java
+@Value("classpath:/prompt-templates/helpDeskSystemPromptTemplate.st")
+Resource helpDeskSystemPromptTemplate;
+
+@Bean("helpDeskChartClient")
+public ChatClient helpDeskChartClient(ChatClient.Builder chatClientBuilder,
+            ChatMemory chatMemory,
+            TimeTools timeTools) {
+    // ...
+    return chatClientBuilder
+            .defaultSystem(helpDeskSystemPromptTemplate)
+            // ...
+}
+```
 
 ### Building the Help Desk Tools
 
@@ -688,88 +662,110 @@ This section details the process of creating a dedicated chat client and associa
     *   Pass the `ticketRequest` object and `username` to the `createTicket` method of the service object.
     *   Return a string indicating the successful creation of the ticket.
         📌 **Example:**
-        ```java
-        @Tool(name = "Create Ticket", description = "Create the support ticket")
-        public String createTicket(@ToolParam(description = "Details to create a support ticket", required = true) TicketRequest ticketRequest, ToolContext toolContext) {
-            String username = (String) toolContext.getContext().get("username");
-            SavedTicket savedTicket = helpdeskTicketService.createTicket(ticketRequest, username);
-            return "Ticket number " + savedTicket.getId() + " created successfully for user " + username;
-        }
-        ```
+```java
+@Tool(
+    name = "createTicket",
+    description = "Create a new Support ticket"
+)
+public String createTicket(
+        @ToolParam(
+            required = true,
+            description = "Details to create a Support ticket"
+        ) TicketRequest ticketRequest,
+        ToolContext toolContext
+) {
+    String username = (String) toolContext.getContext().get("username");
+    log.info("Creating ticket for user: {}", username);
+    HelpDeskTicket ticket = helpDeskTicketService.createTicket(ticketRequest, username);
+    log.info("Ticket #{} created successfully for user: {}", ticket.getId(), username);
+    return "Ticket #" + ticket.getId() + " created successfully for user: " + username;
+}
+```
 5.  Create another tool method to retrieve existing help desk tickets for a user.
     *   This method does not accept input from the LM model.
     *   It uses `ToolContext` to fetch the username.
     *   It calls a method in the service class to retrieve tickets based on the username.
     *   It returns the retrieved tickets as output.
 
+```java
+@Tool(
+    name = "getTicketStatus",
+    description = "Fetch the status of the open tickets based on a given username"
+)
+public List<HelpDeskTicket> getTicketStatus(ToolContext toolContext) {
+    String username = (String) toolContext.getContext().get("username");
+    log.info("Fetching ticket status for user: {}", username);
+    List<HelpDeskTicket> tickets = helpDeskTicketService.getTicketsByUsername(username);
+    log.info("Found {} tickets for user: {}", tickets.size(), username);
+    return tickets;
+}
+```
+
 ### Creating the REST API Controller
 
 1.  Create a new controller class named `HelpDeskController`.
-2.  Annotate the class with `@RestController` and `@RequestMapping("/helpdesk")`.
+2.  Annotate the class with `@RestController` and `@RequestMapping("/api/tools")`.
 3.  Inject the `chatClient` bean (specifically the `helpDeskChatClient` bin) and `HelpdeskTools` into this class using `@Qualifier`.
 4.  Create a new REST API endpoint using `@GetMapping`.
     *   The endpoint should accept the username in the request header and the message as a request parameter.
     *   Inject the `HelpdeskTools` bean using the `tools` method.
         💡 **Tip:** This allows injecting tools specific to this REST API.
     *   Use the `toolContext` method to pass a HashMap containing the username to the tool context.
-        📌 **Example:**
-        ```java
-        Map<String, Object> context = new HashMap<>();
-        context.put("username", username);
-        promptData.setToolContext(context);
-        ```
-        📝 **Note:** This allows passing extra information to the tool context, which can be accessed during tool execution.
-        💡 **Tip:** Use `toolContext` for information the LM model might not be capable of providing, such as session IDs.
+        * 📝 **Note:** This allows passing extra information to the tool context, which can be accessed during tool execution.
+        * 💡 **Tip:** Use `toolContext` for information the LM model might not be capable of providing, such as session IDs.
+
+```java
+@RestController
+@RequestMapping("/api/tools")
+@RequiredArgsConstructor
+public class HelpDeskController {
+    private final ChatClient helpDeskChartClient;
+    private final HelpdeskTools helpdeskTools;
+
+    @GetMapping("/helpdesk")
+    public ResponseEntity<String> helpDesk(@RequestHeader String username, @RequestParam String message) {
+        String answer = helpDeskChartClient.prompt()
+                .advisors(advisorSpec -> advisorSpec.param(CONVERSATION_ID, username))
+                .user(message)
+                .tools(helpdeskTools)
+                .toolContext(Map.of("username", username))
+                .call()
+                .content();
+        return ResponseEntity.ok(answer);
+    }
+}
+```
 
 ---
 
 ## 7. Exploring Tool Calling with Language Models
 
-After restarting the application, a new table should have been created in the H2 database. Let's verify this.
-
-Navigating to the H2 console, we can see a new table named `helpdesk_tickets` has been created.
+After restarting the application, a new table should have been created in the H2 database. Let's verify this. Navigating to the H2 console, we can see a new table named `helpdesk_tickets` has been created.
 
 Querying this table currently returns no records, but the columns are based on the fields defined in our entity class.
 
 Now, let's test our new REST API endpoint, `help_desk`, using Postman.
 
-First, we'll invoke the API by asking the LLM a question: "What is the status of my ticket?"
+First, we'll invoke the API by asking the LLM a question: "What is the status of my ticket?" `curl --location 'http://localhost:8080/api/tools/help-desk?message=what%20is%20the%20status%20of%20my%20ticket' \
+--header 'username: madan24'`
 
 Even though no tickets have been created yet, the LLM should invoke our tool to query the database for existing issues for the user.
 
-To better understand the process, we'll add breakpoints and logger statements to the relevant methods.
-
-```java
-// Example logger statement
-logger.info("Creating support ticket for user with details: {}", toolContext.getUserName());
-logger.info("Ticket created successfully with ID: {} for user: {}", ticket.getId(), toolContext.getUserName());
-```
-
-We'll add a logger statement to the second method as well:
-
-```java
-// Example logger statement
-logger.info("Fetching tickets for user: {}", userName);
-logger.info("Found {} tickets for user.", tickets.size());
-```
-
-After adding the logger statements and breakpoints, we restart the application.
-
-Let's populate the username as "more than 22". This is a new user, so there should be no existing records.
-
 Asking "What is the status of my ticket?" should trigger the LLM to request the Spring application to invoke one of our exposed tools. The breakpoint should hit.
 
-Debugging shows the username fetched from the context is indeed "more than 22". The database query returns empty results.
+Debugging shows the username fetched from the context is indeed "madan24". The database query returns empty results.
 
 The LLM responds: "It appears that you don't have any existing tickets. If you need assistance with an issue, please let me know. I can create a new support ticket on your behalf." This is the expected behavior.
 
-Next, let's send the message: "I am not able to log in into my account. Seems the account is locked."
+Next, let's send the message: "I am not able to log in into my account. Seems the account is locked." `curl --location 'http://localhost:8080/api/tools/help-desk?message=I%20am%20not%20able%20to%20log%20in%20into%20my%20account.%20Seems%20the%20account%20is%20locked.' \
+--header 'username: madan24'`
 
 The LLM first checks for open tickets for the user. Since none exist, it responds: "It seems that you don't have any existing tickets related to your account login issue. I can create a new support ticket for you to address the logged account. Would you like me to proceed with that?"
 
-Responding with "yes" results in: "I have successfully created a new support ticket for your issue, unable to log in into account. Account seems to be logged. Your ticket number is three. You will receive updates regarding your ticket shortly. If you have any other questions or need further assistance, feel free to ask."
+Responding with "yes" (`curl --location 'http://localhost:8080/api/tools/help-desk?message=yes' \
+--header 'username: madan24'`) results in: "I have successfully created a new support ticket for your issue, unable to log in into account. Account seems to be logged. Your ticket number is three. You will receive updates regarding your ticket shortly. If you have any other questions or need further assistance, feel free to ask."
 
-Querying the `helpdesk_tickets` table now shows a new record with the logged issue and a status of "open" for the username "more than 22".
+Querying the `helpdesk_tickets` table now shows a new record with the logged issue and a status of "open" for the username "madan24".
 
 This demonstrates the power of tool calling! 🚀 The logic can be anything: sending emails, triggering APIs, or starting jobs. The possibilities are endless.
 
@@ -789,12 +785,12 @@ A common question is: How are Java objects converted to a format that the LLM ca
 
 The Spring Framework handles this conversion. ⚙️
 
-There are interfaces like `tool call result converter`. The primary responsibility of this interface is to convert tool call results to a string that can be sent back to the AI model.
+There are interfaces like `ToolCallResultConverter`. The primary responsibility of this interface is to convert tool call results to a string that can be sent back to the AI model.
 
 ```java
-// Example of a tool call result converter interface
+// Example of a ToolCallResultConverter interface
 public interface ToolCallResultConverter {
-    String convert(Object result);
+    String convert(@Nullable Object result, @Nullable Type returnType);
 }
 ```
 
@@ -806,11 +802,11 @@ I hope this demo was helpful. We'll discuss more advanced topics around tool cal
 
 ## 8. Using Return Direct for Tool Execution
 
-When a tool is executed, the default behavior is to send the tool's response back to the Language Model (LM). However, there are scenarios where you might want to skip this step and send the output directly to the client application or end-user. This can be achieved using the `Return Direct` configuration.
+When a tool is executed, the default behavior is to send the tool's response back to the Language Model (LM). However, there are scenarios where you might want to skip this step and send the output directly to the client application or end-user. This can be achieved using the `returnDirect` configuration.
 
-To enable this, you need to use the `tools` annotation and set the `Return Direct` flag to `true`. By default, it is set to `false`.
+To enable this, you need to use the `tools` annotation and set the `returnDirect` flag to `true`. By default, it is set to `false`.
 
-📌 **Example:** Tool annotation with `Return Direct` set to `true`:
+📌 **Example:** Tool annotation with `returnDirect` set to `true`:
 
 ```java
 @Tool(name = "MyTool", description = "A sample tool", returnDirect = true)
@@ -835,11 +831,9 @@ Use this configuration in the following scenarios:
 Similar to how you populate the `name` and `description` properties in the tool annotation, you can also set the `Return Direct` flag.
 
 ```java
-@Tool(name = "Create Ticket", description = "Creates a support ticket", returnDirect = true)
+@Tool(name = "createTicket", description = "Create a new Support ticket", returnDirect = true)
 public String createTicket(String issue) {
     // Logic to create a ticket
-    String ticketId = "TKT-12345"; // Example ticket ID
-    return "A new ticket has been created with ID: " + ticketId;
 }
 ```
 
@@ -885,7 +879,7 @@ When a user submits a request that triggers the `Create Ticket` tool with `Retur
 
 Let's explore what happens when a runtime exception occurs during the execution of a tool.
 
-*   If your tool throws an error, Spring AA wraps it in a **Tool Execution Exception**.
+*   If your tool throws an error, Spring AI wraps it in a **Tool Execution Exception**.
 *   By default, these exception details are sent as part of the message to the Language Model (LM).
 *   The LM uses these details to provide a meaningful response to the client application.
 
@@ -925,7 +919,7 @@ Now, let's configure the application to send these exception details directly to
 
 Instead of sending to the LM, we need to create a new bean in the class where the chat client bean is created.
 
-📌 **Example:** Creating a `ToolExecutionExceptionProcessor` bean:
+📌 **Example:** Creating a `ToolExecutionExceptionProcessor` bean inside the `HelpDeskChartClientConfig` class:
 
 ```java
 @Bean
@@ -983,7 +977,7 @@ To address these limitations, the industry developed several key advancements:
 
 3.  **AI Agents**: 
     *   An AI agent is an LLM equipped with access to numerous tools and actions. 
-    *   AI agents can autonomously make decisions and execute multi-step plans. 📌 **Example:** GitHub Copilot is an AI agent that assists with coding tasks.
+    *   AI agents can autonomously make decisions and execute multi-step plans. 📌 **Example:** GitHub Copilot is an AI agent that assists with coding tasks. Cursor IDE.
 
 Let's illustrate the evolution with an example:
 
