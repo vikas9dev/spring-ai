@@ -158,10 +158,10 @@ The choice of **MCP transport type** depends on where the **MCP server** is depl
     *   Best for web apps, browser-based tools, and scenarios requiring two-way, ongoing communication.
     *   Supports multiple concurrent users and keeps conversations alive across many requests using sessions.
 *   **SSE (Server-Sent Events):** ⚠️ **Deprecated**
-    *   An older transport type for streaming data from the server to the client.
+    *   An older transport type for streaming data from the **server to the client**.
     *   Now part of Streamable HTTP for backward compatibility.
     *   May be completely removed in future versions of MCP.
-    *   Useful when only one-way streaming was needed (server to client) and network bandwidth was limited.
+    *   Useful when **only one-way streaming** was needed (server to client) and network bandwidth was limited.
     *   📌 **Example:** Sending live stock prices.
 
 ### STDIO vs. Streamable HTTP
@@ -170,23 +170,25 @@ Here's a comparison of SSE and Streamable HTTP:
 
 | Feature                       | SSE                               | Streamable HTTP                      |
 | ----------------------------- | --------------------------------- | ------------------------------------ |
-| Server to Client Communication | Supported                         | Supported (optionally uses SSE)      |
-| Client to Server Communication | Not Supported                     | Supported (using HTTP POST)          |
-| Session Management            | Not Supported                     | Supported (using MCP session ID headers) |
-| Two-Way Communication         | Not Supported                     | Supported                            |
-| Multiple Concurrent Clients   | Limited Support                   | Better Support                       |
-| Compatibility                 | Limited                           | Improved                             |
+| Server to Client Communication | ✅ Supported                         | ✅ Supported (optionally uses SSE)      |
+| Client to Server Communication | ❌ Not Supported                     | ✅ Supported (using HTTP POST)          |
+| Session Management            | ❌ Not Supported                     | ✅ Supported (using MCP session ID headers) |
+| Two-Way Communication         | ❌ Not Supported                     | ✅ Supported                            |
+| Multiple Concurrent Clients   | ❌ Limited Support                   | ✅ Better Support                       |
+| Better Compatibility                 | ❌ Limited                           | ✅ Improved                             |
 
 Due to the limitations of SSE, **Streamable HTTP is the recommended transport type** for establishing communication between the MCP client and server.
 
+![MCP Transport Types](/docs/img/mcp-transport-types.png)
+
 ### Visual Representation
 
-*   **Local Deployment:** If both MCP servers are deployed locally, STDIO is used.
-*   **Remote Deployment:** If MCP servers are deployed remotely, Streamable HTTP is used.
+*   **Local Deployment:** If both MCP servers are deployed locally, **STDIO** is used.
+*   **Remote Deployment:** If MCP servers are deployed remotely, **Streamable HTTP** is used.
 
 ### Additional Resources
 
-*   **Official MCP Website:** This is the go-to resource for the latest information on MCP.
+*   **[Official MCP Website](https://modelcontextprotocol.io/docs/getting-started/intro):** This is the go-to resource for the latest information on MCP.
     *   Concepts -> Transports: Details on all transport types.
     *   Core Architecture: How MCP works with hosts, clients, and servers.
 
@@ -222,45 +224,14 @@ Here's the plan:
 
 To start, we'll create a Spring Boot project and add the necessary dependencies.
 
-First, create a new Spring Boot project using a tool like Spring Initializr.  Set the group as "Combat Bytes" and the artifact and name as "MCP client".
+First, create a new Spring Boot project using a tool like Spring Initializr.  Set the group as "knowprogram" and the artifact and name as "mcpclient".
 
 Next, add the following dependencies:
 
 *   Spring Web: To expose REST APIs.
 *   Spring AI OpenAI: To use OpenAI LLM models.
 *   Spring Boot DevTools: For quick restarts during development.
-*   Model Context Protocol Client: The MCP client dependency.  Make sure to select the "Model context protocol client" starter project.
-
-Now, let's add the dependencies to the `pom.xml` file.
-
-```xml
-<dependencies>
-    <!-- Spring Web -->
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-    <!-- Spring AI OpenAI -->
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-ai-openai</artifactId>
-        <version>0.8.0</version>
-    </dependency>
-    <!-- Spring Boot DevTools -->
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-devtools</artifactId>
-        <scope>runtime</scope>
-        <optional>true</optional>
-    </dependency>
-    <!-- MCP Client -->
-    <dependency>
-        <groupId>org.springframework.ai</groupId>
-        <artifactId>spring-ai-mcp-client-starter</artifactId>
-        <version>0.8.0</version>
-    </dependency>
-</dependencies>
-```
+*   Model Context Protocol Client (`spring-ai-starter-mcp-client`): The MCP client dependency.  Make sure to select the "Model context protocol client" starter project (not the "Model context protocol server" starter).
 
 Generate the project and open it in your IDE (e.g., IntelliJ).
 
@@ -284,52 +255,21 @@ Now, create a new controller package (e.g., `com.example.mcpclient.controller`) 
 
 Annotate the class with `@RestController` and `@RequestMapping("/api")`.
 
-```java
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-
-@RestController
-@RequestMapping("/api")
-public class MCPClientController {
-
-}
-```
-
 Next, inject a `ChatClient` bean into the controller. Use a `ChatClientBuilder` to configure the client with a `SimpleLoggingAdvisor`.
 
 ```java
-import org.springframework.ai.chat.ChatClient;
-import org.springframework.ai.autoconfigure.openai.OpenAiChatProperties;
-import org.springframework.ai.chat.prompt.PromptTemplate;
-import org.springframework.ai.advisor.SimpleLoggingAdvisor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.ai.chat.ChatClientBuilder;
-
 @RestController
 @RequestMapping("/api")
 public class MCPClientController {
+    private final ChatClient chatClient;
 
-    private ChatClient chatClient;
-
-    @Autowired
-    public MCPClientController(ChatClient chatClient) {
-        this.chatClient = chatClient;
+    public MCPClientController(ChatClient.Builder chatClientBuilder) {
+        this.chatClient = chatClientBuilder.defaultAdvisors(new SimpleLoggerAdvisor()).build();
     }
 
     @GetMapping("/chat")
-    public String chat(@RequestParam("message") String message) {
-        return chatClient.call(message);
-    }
-
-    @Bean
-    public ChatClient chatClient(OpenAiChatProperties openAiChatProperties) {
-        return new ChatClientBuilder()
-                .withDefaultAdvisors()
-                .withAdvisor(new SimpleLoggingAdvisor())
-                .build();
+    public String chat(@RequestParam String message) {
+        return chatClient.prompt().user(message).call().content();
     }
 }
 ```
@@ -338,13 +278,14 @@ This code defines a simple REST API endpoint `/chat` that takes a message as inp
 
 Build the project and start the application.
 
-Once the application is started, you can invoke the REST API with a message (e.g., "Who are you and how can you help me?"). You should receive a response from the OpenAI model.
+Once the application is started, you can invoke the REST API with a message (e.g., "Who are you and how can you help me?"). `curl --location 'http://localhost:8080/api/chat?message=Who%20are%20you%20and%20how%20can%20you%20help%20me%3F' \
+--header 'username: testUser99'` You should receive a response from the OpenAI model.
 
 Now that we have a basic Spring AI application working, let's implement the MCP client capabilities.
 
 To get started with the MCP client, we need to choose an MCP server to interact with.
 
-Visit the official MCP protocol website and navigate to the GitHub repository.
+Visit the official MCP protocol website and navigate to the [GitHub repository](https://github.com/modelcontextprotocol).
 
 On the GitHub repo, you'll find official documentation and SDKs for various languages.  The Java SDK is designed and donated by the Spring AI team.
 
@@ -357,7 +298,7 @@ Reference servers are simple MCP servers developed officially by the MCP team. T
 *   Atlassian provides an MCP server for interacting with JIRA and Confluence.
 *   AWS, Azure, and Cloudflare also offer MCP servers.
 
-For this demo, we'll use the "File System" MCP server, which is a simple NodeJS application capable of performing file system operations.
+For this demo, we'll use the "**[File System](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem)**" MCP server, which is a simple NodeJS application capable of performing file system operations.
 
 With this server, you can instruct the LLM model to read files, write files, create directories, search files, and get file metadata.
 
@@ -376,46 +317,44 @@ Create a new file named `mcp-servers.json` under the `src/main/resources` folder
 Copy the configurations for the File System MCP server from the official documentation and paste them into the `mcp-servers.json` file.
 
 ```json
-[
-  {
-    "name": "File System",
-    "command": "npx",
-    "args": [
-      "-y",
-      "@model-context-protocol/server-file-system",
-      "--directory",
-      "/Users/yourusername/Website/MCP"
-    ]
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/yourusername/Website/MCP"
+      ]
+    }
   }
-]
+}
 ```
 
-Replace `/Users/yourusername/Website/MCP` with the actual path to a directory on your local system. Make sure this directory exists.
+Replace `/Users/yourusername/Website/MCP` with the actual path to a directory on your local system. Make sure this directory exists (like `/home/vikas/workspace/spring-ai/playground/mcp`).
 
 ⚠️ **Warning:**  If you are using Windows, you need to provide your Windows-specific path (e.g., `C:\\Users\\yourusername\\MCP`).
 
 This configuration tells the Spring AI application to set up the MCP server using `npx` and specifies the command and arguments to use.
+
+**Note**: For the MCP server to get started successfully, please make sure to install **Node JS** in your system.
 
 Now, we need to inject the tools details from the MCP server into our `ChatClient` bean. To do this, we'll use a bean of type `ToolCallbackProvider`.
 
 Add the following code to your `MCPClientController`:
 
 ```java
-import org.springframework.ai.embedding.EmbeddingClient;
-import org.springframework.ai.reader.ToolCallbackProvider;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Bean;
-import org.springframework.ai.chat.ChatClientBuilder;
+public MCPClientController(ChatClient.Builder chatClientBuilder, ToolCallbackProvider toolCallbackProvider) { // add the ToolCallbackProvider
+    this.chatClient = chatClientBuilder
+            .defaultToolCallbacks(toolCallbackProvider)
+            .defaultAdvisors(new SimpleLoggerAdvisor())
+            .build();
+}
+```
 
-@RestController
-@RequestMapping("/api")
-public class MCPClientController {
+Build the project and run the application.
 
-    private ChatClient chatClient;
-
-    @Autowired
-    public MCPClientController(ChatClient chatClient) {
-        this.chatClient = chatClient;
+Now, you can use the `/chat` endpoint to interact with the MCP server using the LLM model.
 
 ---
 

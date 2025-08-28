@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "/home/vikas/.nvm/versions/node/v18.20.5/bin/npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/vikas/workspace/spring-ai/playground/mcp"
+      ]
+    }
+  }
+}
