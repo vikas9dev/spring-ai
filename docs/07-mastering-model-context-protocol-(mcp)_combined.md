@@ -360,6 +360,8 @@ Now, you can use the `/chat` endpoint to interact with the MCP server using the 
 
 ## 5. Demonstrating File and Directory Management with MCP and LM Model
 
+**Note: Somehow the npx was not working, will try this later**
+
 This section demonstrates how an LM model interacts with an MCP server to perform file and directory management tasks using natural language instructions.
 
 Initially, the LM model is queried to understand its capabilities. The response confirms its ability to assist with:
@@ -429,7 +431,7 @@ The upcoming lectures will focus on building an MCP server.
 
 ## 6. Understanding and Using the MCP Inspector
 
-The MCP team has developed a utility app called the **MCP Inspector** to help you understand and test MCP servers. This tool is highly recommended for exploring the capabilities of MCP servers, especially those developed by other organizations. Instead of relying solely on documentation, the Inspector allows you to quickly discover the tools, resources, and prompts exposed by an MCP server.
+The MCP team has developed a utility app called the **[MCP Inspector](https://github.com/modelcontextprotocol/inspector)** to help you understand and test MCP servers. This tool is highly recommended for exploring the capabilities of MCP servers, especially those developed by other organizations. Instead of relying solely on documentation, the Inspector allows you to quickly discover the tools, resources, and prompts exposed by an MCP server.
 
 ### Getting Started with the MCP Inspector
 
@@ -439,7 +441,7 @@ To start using the MCP Inspector, follow these steps:
 2.  **Execute the following command:**
 
     ```bash
-    npx @model-context-protocol/inspector
+    npx @modelcontextprotocol/inspector
     ```
 
     ⚠️ **Warning:** Make sure you have Node.js installed before running this command. Otherwise, it will not work.
@@ -469,10 +471,10 @@ If you don't have Node.js installed, follow these steps:
 After installing Node.js, execute the `npx` command mentioned earlier:
 
 ```bash
-npx @model-context-protocol/inspector
+npx @modelcontextprotocol/inspector
 ```
 
-This will start the MCP Inspector and automatically open it in your browser. If it doesn't open automatically, use the URL provided in the terminal output.
+This will start the MCP Inspector and automatically open it in your browser. If it doesn't open automatically, use the URL provided in the terminal output, and by default UI will be accessible at [http://localhost:6274](http://localhost:6274).
 
 ### Connecting to an MCP Server
 
@@ -482,11 +484,16 @@ The MCP Inspector UI will appear, allowing you to connect to an MCP server. Here
 2.  Enter the command used to start the MCP server, along with any necessary arguments.  These details can also be found in the official documentation of the MCP server. 📌 **Example:**
 
     ```bash
-    npx -y @model-context-protocol/server ./path/to/your/server
+    npx -y @modelcontextprotocol/server ./path/to/your/server
     ```
 
-3.  In the "Arguments" section, provide the arguments, separating them with whitespace. 📌 **Example:** `-y @model-context-protocol/server ./path/to/your/server`
+3.  In the "Arguments" section, provide the arguments, separating them with whitespace. 📌 **Example:** `-y @modelcontextprotocol/server-filesystem /home/vikas/workspace/spring-ai/playground/mcp`
 4.  If your MCP server requires environment variables, you can add them in the "Environment Variables" section.
+```log
+Transport Type: STDIO
+Command: npx
+Arguments: -y @modelcontextprotocol/server-filesystem /home/vikas/workspace/spring-ai/playground/mcp
+```
 5.  Click the "Connect" button.
 
 You might encounter a warning about securing your MCP server. For demo purposes, you can usually ignore this.
@@ -506,7 +513,45 @@ The MCP Inspector allows you to explore the tools, resources, and prompts expose
 
 To understand the purpose of a tool, click on it. This will display a description and the input details it expects.
 
-📌 **Example:**
+📌 **Example-1:**
+
+1.  Select the `write_file` tool. It create a new file or completely overwrite an existing file with new content. 
+2.  Path: `/home/vikas/workspace/spring-ai/playground/mcp/test.txt`
+3.  Content: `Hello, world!`
+4.  Click "Run Tool."
+
+The Inspector will execute the tool and display the result, which in this case would be a success message.
+
+Request:-
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "write_file",
+    "arguments": {
+      "path": "/home/vikas/workspace/spring-ai/playground/mcp/test.txt",
+      "content": "Hello"
+    },
+    "_meta": {
+      "progressToken": 1
+    }
+  }
+}
+```
+Response:-
+```json
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Successfully wrote to /home/vikas/workspace/spring-ai/playground/mcp/test.txt"
+    }
+  ]
+}
+```
+We can see the newly created file with the given content.
+
+📌 **Example-2:**
 
 1.  Select the `readFile` tool.
 2.  Provide the path to a text file in the "path" field. 📌 **Example:** `/user/mcp/test.txt`
@@ -536,8 +581,8 @@ This section explains how to integrate a Spring AI application with a GitHub MCP
 
 ### Finding the GitHub MCP Server
 
-1.  Search for "GitHub MCP server" on GitHub.
-2.  Locate the official GitHub MCP server repository.
+1.  Search for "GitHub" on the [list of MCP servers](https://github.com/modelcontextprotocol/servers).
+2.  Locate the [official GitHub MCP server repository](https://github.com/github/github-mcp-server).
 3.  The repository provides instructions on setting up the server, either remotely or locally.
 
 ### Prerequisites
@@ -548,28 +593,62 @@ This section explains how to integrate a Spring AI application with a GitHub MCP
 ### Configuration
 
 1.  Copy the GitHub MCP server configurations from the official documentation.
+```json
+{
+  "github": {
+    "command": "docker",
+    "args": [
+      "run",
+      "-i",
+      "--rm",
+      "-e",
+      "GITHUB_PERSONAL_ACCESS_TOKEN",
+      "ghcr.io/github/github-mcp-server"
+    ],
+    "env": {
+      "GITHUB_PERSONAL_ACCESS_TOKEN": "${input:github_token}"
+    }
+  }
+}
+```
 2.  Paste the configurations into the `mcp-servers.json` file in your Spring AI project.
     *   If you already have an MCP server configured (e.g., "file system"), add a comma and then paste the GitHub MCP server configuration.
 
 📌 **Example:** `mcp-servers.json`
 ```json
-[
-  {
-    "name": "file-system",
-    "url": "http://localhost:8080/file-system"
-  },
-  {
-    "name": "github",
-    "url": "http://localhost:8080/github"
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/vikas/workspace/spring-ai/playground/mcp"
+      ]
+    },
+    "github": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${input:github_token}"
+      }
+    }
   }
-]
+}
 ```
 
 ### Running the GitHub MCP Server with Docker
 
 The GitHub MCP server can be run locally using Docker.
 
-1.  Use the following Docker command:
+1.  It uses the following Docker command:
 
 ```bash
 docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN=<YOUR_GITHUB_TOKEN> <DOCKER_IMAGE_NAME>
@@ -614,9 +693,9 @@ docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN=<YOUR_GITHUB_TOKEN> <DOCKER_I
 1.  List GitHub repositories: "List down the GitHub repositories of `<YOUR_GITHUB_USERNAME>`".
     *   Replace `<YOUR_GITHUB_USERNAME>` with your actual GitHub username.
     *   The application should return a list of your repositories with their stats and metrics.
-2.  Create a new repository: "Create a new repository. The name of the repository is spring a demo."
+2.  Create a new repository: "Create a new repository. The name of the repository is spring-ai-demo-github-mcp-test."
     *   The application should create a new repository with the specified name under your account.
-3.  Create a README file: "Create a readme file in `<YOUR_GITHUB_USERNAME>`/spring-ai-demo repository."
+3.  Create a README file: "Create a readme file in `<YOUR_GITHUB_USERNAME>`/spring-ai-demo-github-mcp-test repository."
     *   Replace `<YOUR_GITHUB_USERNAME>` with your actual GitHub username.
     *   The application should create a README file in the specified repository.
 
@@ -625,13 +704,13 @@ docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN=<YOUR_GITHUB_TOKEN> <DOCKER_I
 1.  Execute the following command to start the MCP inspector:
 
 ```bash
-npx model-context-protocol/inspector
+npx @modelcontextprotocol/inspector
 ```
 
 2.  Configure the inspector:
-    *   **Transport type:** Stdio
-    *   **Command:** Docker
-    *   **Arguments:** `run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN=<YOUR_GITHUB_TOKEN> <DOCKER_IMAGE_NAME>`
+    *   **Transport type:** STDIO
+    *   **Command:** docker
+    *   **Arguments:** `run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server`
     *   **Environment Variables:** Add an environment variable named `GITHUB_PERSONAL_ACCESS_TOKEN` with your GitHub access token as the value.
 3.  Click **Connect**.
 4.  Go to **Tools** and click **List tools** to see the tools exposed by the GitHub repository.

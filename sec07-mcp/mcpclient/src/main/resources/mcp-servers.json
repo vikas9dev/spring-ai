@@ -1,12 +1,18 @@
 {
   "mcpServers": {
-    "filesystem": {
-      "command": "/home/vikas/.nvm/versions/node/v18.20.5/bin/npx",
+    "github": {
+      "command": "docker",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/home/vikas/workspace/spring-ai/playground/mcp"
-      ]
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": ""
+      }
     }
   }
 }
