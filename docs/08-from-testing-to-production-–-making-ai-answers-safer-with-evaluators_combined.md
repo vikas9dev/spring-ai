@@ -66,6 +66,8 @@ Here's a breakdown of the unit testing process:
 5.  Based on this context, the LM model provides evaluation results (e.g., whether the answer is correct or relevant).
 6.  The evaluator component uses these results to determine if the unit test passes or fails.
 
+![unit-testing-process-with-evaluators](/docs/img/unit-testing-process-with-evaluators.png)
+
 ### The Importance of Unit Testing
 
 Unit testing is crucial for ensuring code quality and preventing surprises in production.
@@ -90,20 +92,23 @@ A junior developer might ask: "You're telling me to write code to check if the c
 
 ## 2. Unit Testing Concepts Demo with Spring AI
 
-This blog post details a demonstration of unit testing concepts using a basic Spring AI project.
+This section presents a practical demonstration of unit testing concepts using a basic Spring AI project. The project leverages the following dependencies:
+*   `spring-boot-starter-web` for creating RESTful APIs.
+*   `spring-ai-openai` to interact with the OpenAI LM model.
+*   `spring-boot-devtools` for convenient development and debugging.
+*   `spring-boot-starter-test` for unit testing purposes (available by default).
 
-The project structure includes:
+It contains a [hrTemplate.st](/sec08-unittest/unittest/src/main/resources/promptTemplates/hrPolicy.st) template to simulate a RAG scenario.
 
-*   A controller named `ChartController`.
-*   Two APIs: `/chart` and `/prompt-stuffing`.
+The project structure includes: A controller named `ChartController` with two APIs: `/chat` and `/prompt-stuffing`.
 
-### `/chart` API
+### `/chat` API
 
-The `/chart` API simply passes the received prompt to the Language Model (LM) using a chat client bean. This bean is created in the constructor of the `ChartController` class. Invoking this API allows users to ask any question to the LM model.
+The `/chat` API simply passes the received prompt to the Language Model (LM) using a chat client bean. This bean is created in the constructor of the `CharController` class. Invoking this API allows users to ask any question to the LM model.
 
 ### `/prompt-stuffing` API
 
-The `/prompt-stuffing` API provides a system message by loading data from the `Air Policy` template located in the resources folder. This API simulates a Retrieval-Augmented Generation (RAG) scenario, providing the LM model with context to answer questions. The `Air Policy` template contains air policy-related data.
+The `/prompt-stuffing` API provides a system message by loading data from the `HR Policy` template located in the resources folder. This API simulates a Retrieval-Augmented Generation (RAG) scenario, providing the LM model with context to answer questions. The [hrTemplate.st](/sec08-unittest/unittest/src/main/resources/promptTemplates/hrPolicy.st) template contains HR policy-related data.
 
 The goal is to write unit tests for both of these REST APIs.
 
@@ -111,28 +116,28 @@ The goal is to write unit tests for both of these REST APIs.
 
 The `application.properties` file contains the following configurations:
 
+```properties
+spring.application.name=unittest
+logging.pattern.console=%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger{36} - %msg%n
+logging.level.org.springframework.ai.advisor=DEBUG
+spring.ai.openai.api-key=${OPENAI_API_KEY}
+```
+
 *   Logging pattern for the console.
 *   Log level set to debug for advisor-related packages.
 *   OpenAI API key set using an environment variable. The value of the environment variable is assigned to the `openai.api-key` property, which is used by the Spring AI framework to interact with the OpenAI LM model.
 
-### Dependencies (pom.xml)
-
-The `pom.xml` file includes the following dependencies:
-
-*   `spring-boot-starter-web`
-*   `spring-ai-openai`
-*   `spring-boot-devtools`
-*   `spring-boot-starter-test` (the primary dependency for unit testing)
-
-The project is available in a GitHub repository.
+Before moving ahead, build and run the application, and test both the apis.
+- curl --location 'http://localhost:8080/api/chat?message=What%20is%20your%20name%20and%20which%20model%20you%20are%20using%20%3F'
+- curl --location 'http://localhost:8080/api/prompt-stuffing?message=I%20used%205%20leaves%20in%20this%20year.%20How%20many%20will%20be%20forwarded%20to%20next%20year'
 
 ### Test Package
 
-Under the standard Spring Boot project structure, the test files are located in the `src/test/java` directory, mirroring the main application's package structure (e.g., `com.easy.springai`). The default generated test file will be enhanced to include unit testing code.
+Under the standard Spring Boot project structure, the test files are located in the `src/test/java` directory, mirroring the main application's package structure. The default generated test file will be enhanced to include unit testing code.
 
 ### Spring AI Evaluator Component
 
-The Spring AI framework includes an interface called `Evaluator`, which is crucial for unit testing AI scenarios.
+The Spring AI framework includes an interface called `Evaluator`, which is crucial for unit testing AI scenarios (present inside the `spring-ai-commons` module).
 
 #### Evaluator Interface
 
@@ -151,19 +156,42 @@ The `Evaluator` interface also has a default method that converts the context da
 
 The `Evaluator` interface defines a contract for performing unit testing of GenAI scenarios. There are a couple of implementations:
 
-1.  **Relevancy Evaluator**: Checks if the response generated by the LM model is relevant to the question.
-2.  **Fact Checking Evaluator**: Checks if the answer provided by the LM model is correct.
+1.  **RelevancyEvaluator**: Checks if the response generated by the LM model is relevant to the question.
+2.  **FactCheckingEvaluator**: Checks if the answer provided by the LM model is correct.
 
 ##### Relevancy Evaluator
 
 The `RelevancyEvaluator` determines if the LM model's response aligns with the provided context.
 
 *   It uses a prompt template with instructions for the LM model:
-    > "Your task is to evaluate if the response for the query is in line with the context information provided. You have two options to answer either yes or no. Answer yes if the response for the query is in line with the context information, otherwise no."
+    ```java
+    private static final PromptTemplate DEFAULT_PROMPT_TEMPLATE = new PromptTemplate("""
+        Your task is to evaluate if the response for the query 
+        is in line with the context information provided.
+
+        You have two options to answer: YES or NO.
+
+        Answer YES, if the response for the query 
+        is in line with the context information otherwise NO.
+
+        Query:
+        {query}
+
+        Response:
+        {response}
+
+        Context:
+        {context}
+
+        Answer:
+        """);
+    ```
 *   The template includes placeholders for the query (original prompt), the LM model's response, and any context information (for RAG scenarios).
 *   The framework makes a call to the LM model, providing the user question, the response, and the context information.
 *   Based on the LM model's evaluation (yes or no), the `passing` variable is set to `true` (and the score to 1) if relevant, or `false` (and the score to 0) if not.
 *   The `EvaluationResponse` object is then constructed with this information.
+
+📝 **Note:** Currently, the relevancy score is either 0 or 1. Future versions of the framework may provide more granular relevancy scores (e.g., 0.5, 0.7) to indicate partial relevancy.
 
 ##### Fact Checking Evaluator
 
@@ -172,13 +200,24 @@ The `FactCheckingEvaluator` verifies the correctness of the LM model's answer. R
 📌 **Example:** If the question is "What is the capital of India?" and the LM model responds with "India is a great country with various cultures and languages," the answer is relevant to India but does not provide the correct answer.
 
 *   It uses a prompt template with instructions for the LM model:
-    > "Evaluate whether or not the following claim is supported by the provided document. Respond with yes if the claim is supported, or no if it is not."
+
+```java
+private static final String DEFAULT_EVALUATION_PROMPT_TEXT = """
+    Evaluate whether or not the following claim is supported by the provided document.
+    Respond with "yes" if the claim is supported, or "no" if it is not.
+
+    Document:
+    {document}
+
+    Claim:
+    {claim}
+    """;
+```
+
 *   The framework asks the LM model to answer "yes" if the claim is supported by the document, and "no" if it is not.
 *   The `evaluate` method passes the relevant information to the LM model.
 *   The `passing` Boolean variable in the `EvaluationResponse` object indicates whether the answer is correct.
 *   The framework does not provide a score for fact-checking, only a pass/fail indication.
-
-📝 **Note:** Currently, the relevancy score is either 0 or 1. Future versions of the framework may provide more granular relevancy scores (e.g., 0.5, 0.7) to indicate partial relevancy.
 
 ---
 
@@ -195,8 +234,8 @@ To begin, we need to add a couple of annotations to the class:
 
     ```java
     @TestPropertySource(properties = {
-            "openai.api-key=${OPENAI_API_KEY:sk-...}",
-            "logging.level.org.springframework.ai=DEBUG"
+        "spring.ai.openai.api-key=${OPENAI_API_KEY:test-kay}",
+        "logging.level.org.springframework.ai=DEBUG"
     })
     ```
 
@@ -218,26 +257,25 @@ First, let's inject the necessary beans:
 *   `ChartController`: This class contains the REST APIs we want to test. We'll use field injection.
 *   `ChartModel`: Since we're using OpenAI as a dependency, an `OpenChartModel` object will be created. We'll inject this bean as well. 📝 **Note:** The `OpenChartModel` class is a single class with the name Open Chart model.
 
-After dependency injection, we'll create Java fields for `ChartClient` and `RelevancyEvaluator`. These fields will be initialized in the `setup` method.
+After dependency injection, we'll create Java fields for `ChatClient` and `RelevancyEvaluator`. These fields will be initialized in the `setup` method.
 
-Now, let's initialize the `ChartClient` and `RelevancyEvaluator` inside the `setup` method:
+Now, let's initialize the `ChatClient` and `RelevancyEvaluator` inside the `setup` method:
 
-1.  Create a `ChartClient` using the `ChartClient.Builder`:
+1.  Create a `ChatClient` using the `ChatClient.Builder`:
 
     ```java
-    ChartClientBuilder chartClientBuilder = ChartClient.builder(chartModel)
-            .withAdvisor(new SimpleLoggingAdvisor());
-    chartClient = chartClientBuilder.build();
+    ChatClient.Builder chatClientBuilder = ChatClient.builder(chatModel).defaultAdvisors(new SimpleLoggerAdvisor());
+    this.chatClient = chatClientBuilder.build();
     ```
 
-    Here, we pass the `chartModel` bean to the builder and add a `SimpleLoggingAdvisor`.
+    Here, we pass the `chatModel` bean to the builder and add a `SimpleLoggingAdvisor`.
 2.  Create a `RelevancyEvaluator` object:
 
     ```java
-    relevancyEvaluator = new RelevancyEvaluator(chartClientBuilder);
+    relevancyEvaluator = new RelevancyEvaluator(chatClientBuilder);
     ```
 
-    We pass the `chartClientBuilder` to the `RelevancyEvaluator` constructor.
+    We pass the `ChatClientBuilder` to the `RelevancyEvaluator` constructor.
 
 With the setup complete, we can now define our unit testing logic.
 
@@ -266,7 +304,7 @@ Inside the test method:
 2.  Invoke the REST API in the `ChartController`:
 
     ```java
-    String response = chartController.chart(question);
+    String aiResponse = chartController.chat(question);
     ```
 
     This invokes the actual controller logic and retrieves the response.
@@ -289,11 +327,16 @@ Inside the test method:
     import static org.assertj.core.api.Assertions.assertThat;
     import org.junit.jupiter.api.Assertions;
 
-    Assertions.assertAll(
-            () -> assertThat(response).isNotBlank(),
-            () -> assertThat(evaluationResponse.isPass()).isTrue()
-                    .withFailMessage("The answer was not considered relevant for a given question and response.")
-    );
+    Assertions.assertAll(() -> assertThat(aiResponse).isNotBlank(),
+                () -> assertThat(evaluationResponse.isPass())
+                        .withFailMessage("""
+                                ========================================
+                                The answer was not considered relevant.
+                                Question: "%s"
+                                Response: "%s"
+                                ========================================
+                                """, question, aiResponse)
+                        .isTrue());
     ```
 
     These assertions check that the response is not blank and that the `isPass` value in the `EvaluationResponse` is true. 💡 **Tip:** These are basic unit testing concepts.
@@ -301,16 +344,23 @@ Inside the test method:
     We can also check the relevancy score:
 
     ```java
-    double minimumRelevancyScore = 0.7; // Or inject this value via property
-    Assertions.assertAll(
-            () -> assertThat(evaluationResponse.getScore()).isGreaterThan(minimumRelevancyScore)
-                    .withFailMessage("The given score is lower than minimum required value for this question and response.")
-    );
+    @Value("${test.min.relevancy.min-score:0.7}")
+    private float minRelevancyScore;
+
+    assertThat(evaluationResponse.getScore())
+                        .withFailMessage("""
+                                ========================================
+                                The score %.2f is lower than the minimum required %.2f.
+                                Question: "%s"
+                                Response: "%s"
+                                ========================================
+                                """, evaluationResponse.getScore(), minRelevancyScore, question, aiResponse)
+                        .isGreaterThan(minRelevancyScore));
     ```
 
     This assertion checks if the score is greater than a minimum required value.
 
-Before running the test, make sure to configure the environment variables in the run configuration. Right-click and select "Modify Run Configuration" to add the necessary environment variables (e.g., `OPENAI_API_KEY`).
+Before running the test, make sure to configure the environment variables in the run configuration. In the same test class, click the "Run" button and select "Modify Run Configuration" to add the necessary environment variables (e.g., `OPENAI_API_KEY`).
 
 Finally, run the unit test. If all assertions pass, the test will be marked as successful. You can also debug the test to inspect the values of variables and step through the code.
 
@@ -359,7 +409,10 @@ We'll create a unit test to evaluate the factuality of an LM's response to a que
     Create an instance of the `FactCheckingEvaluator`.
 
     ```csharp
-    FactCheckingEvaluator factCheckingEvaluator = new FactCheckingEvaluator(_chartLineBuilder);
+    FactCheckingEvaluator factCheckingEvaluator;
+
+    // In the constructor
+    this.factCheckingEvaluator = new FactCheckingEvaluator(chatLineBuilder);
     ```
 
     📝 **Note:**  Pass the `_chartLineBuilder` object to the constructor, similar to the relevancy evaluator.
@@ -425,7 +478,7 @@ The core idea is to ensure the LLM uses the provided context when answering ques
 
 ### Key Concepts
 
-*   The API endpoint is `/prompt-hyphen-stuffing`.
+*   The API endpoint is `/prompt-stuffing`.
 *   The LLM's responses are restricted to the provided context.
 *   Contextual information is passed using a system method, specifically the **air policy template**.
 
@@ -471,29 +524,6 @@ Let's outline the steps to create a unit test for this scenario:
     *   `claim`: Populated with the LLM's response.
 8.  **Assert the Result:** Check if the `sparse` variable in the evaluation response is `true`. If it is, the test passes; otherwise, the test fails.
 
-### Code Example
-
-Here's a simplified example of the unit test structure:
-
-```java
-@Test
-@DisplayName("Should correctly evaluate factual response based upon HR policy context")
-void evaluateHRPolicyAnswerWithRagContext() {
-    String question = "How many failures do employees get annually?";
-    String aiResponse = chatController.promptStuffing(question);
-
-    // Prepare contextual information (as described above)
-    String policyContent = airPolicyTemplate.getContentAsString(StandardCharsets.UTF_8);
-    Document document = new Document(policyContent);
-    List<Document> documents = List.of(document);
-
-    EvaluationRequest evaluationRequest = new EvaluationRequest(question, aiResponse, documents);
-    EvaluationResponse evaluationResponse = factCheckingEvaluator.evaluate(evaluationRequest);
-
-    assertTrue(evaluationResponse.isSparse(), "The response should be factual based on the HR policy context.");
-}
-```
-
 ### Testing
 
 1.  Comment out other tests to focus on the new test.
@@ -538,23 +568,15 @@ Here's the general approach:
 
 ### Implementation Steps
 
-1.  **Create a new controller:** Copy the existing chat controller and rename it to `SelfEvaluatingChatController`. Update the API paths to avoid conflicts (e.g., `/evaluate/chat`).
-
-    ```java
-    @RestController
-    @RequestMapping("/evaluate")
-    public class SelfEvaluatingChatController {
-    }
-    ```
+1.  **Create a new controller:** Copy the existing chat controller and rename it to `SelfEvaluatingChatController`. Update the API paths to avoid conflicts (e.g., `/chat/evaluate`).
 
 2.  **Create a Fact Checking Evaluator:** Instantiate a `FactCheckingEvaluator` using the `ChatClient`.
 
     ```java
     private FactCheckingEvaluator factCheckingEvaluator;
 
-    public SelfEvaluatingChatController(ChatClient chatClient) {
-        this.factCheckingEvaluator = new FactCheckingEvaluator(chatClient);
-    }
+    // in constructor
+    this.factCheckingEvaluator = new FactCheckingEvaluator(chatClientBuilder);
     ```
 
 3.  **Create a Validation Method:** Create a private method `validate` that takes the question and answer as input. This method will use the `FactCheckingEvaluator` to evaluate the response.
@@ -592,7 +614,7 @@ Here's the general approach:
     ```java
     @PostMapping("/chat")
     public String chat(@RequestBody String message) {
-        String response = chatClient.call(message);
+        String response = chatClient.prompt().user(message).call().content();
         try {
             validate(message, response);
             return response;
@@ -625,7 +647,7 @@ Here's the general approach:
 ### Assignment
 
 *   Apply the same changes to the prompt stuffing REST API.
-*   Remember to provide contextual information from the air policy template to the evaluation request.
+*   Remember to provide contextual information from the HR policy template to the evaluation request.
 
 ### Conclusion
 
@@ -640,7 +662,7 @@ With the current code, an invalid answer exception is thrown if the Language Mod
 As a developer, you can use the `@Retryable` annotation on top of a REST API method to enable retries.
 
 ```java
-@Retryable(value = InvalidAnswerException.class)
+@Retryable(retryFor = InvalidAnswerException.class)
 public String yourRestApiMethod() {
     // Your logic here
 }
@@ -654,7 +676,7 @@ This annotation instructs the Spring AI framework to retry sending the prompt to
 You can modify the default number of retries using the `maxAttempts` property.
 
 ```java
-@Retryable(value = InvalidAnswerException.class, maxAttempts = 3)
+@Retryable(retryFor = InvalidAnswerException.class, maxAttempts = 3)
 public String yourRestApiMethod() {
     // Your logic here
 }
@@ -680,12 +702,12 @@ In addition to the controller class changes, you need to make the following chan
 
     This enables the retry functionality provided by the Spring framework.
 
-2.  Since the retry logic utilizes Spring's Aspect-Oriented Programming (AOP) concepts, ensure that you add the `spring-aspects` dependency to your `pom.xml`.
+2.  Since the retry logic utilizes Spring's Aspect-Oriented Programming (AOP) concepts, ensure that you add the `spring-boot-starter-aop` dependency to your `pom.xml`.
 
     ```xml
     <dependency>
-        <groupId>org.springframework</groupId>
-        <artifactId>spring-aspects</artifactId>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-aop</artifactId>
     </dependency>
     ```
 
