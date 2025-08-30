@@ -725,15 +725,15 @@ The next step is to learn how to build your own MCP servers to expose your own t
 
 ---
 
-## 8. Building an MCP Server with Stdio Transport
+## 8. Building an MCP Server with Stdio Transport - 1
 
 When building an MCP server, the first decision is whether to support Stdio or Streamable HTTP transport. This section focuses on building an MCP server using the Stdio transport type. Other options will be explored later.
 
 Creating an MCP server involves the following steps:
 
 1.  **Project Setup:**
-    *   Go to [Start.spring.io](https://start.spring.io).
-    *   Set the artifact ID to `MCP server Stdio`.
+    *   Go to Spring Initializr: [https://start.spring.io/](https://start.spring.io/).
+    *   Set the artifact ID to `mcpserverstdio`.
     *   Add the following dependencies:
         *   `spring-web`
         *   `spring-cloud-starter-model-context-protocol-server` (MCP Server)
@@ -752,16 +752,16 @@ Creating an MCP server involves the following steps:
 3.  **Maven Configuration:**
     *   Verify the project is recognized as a Maven project. If not, manually add it using the "+" symbol in the Maven tool window.
     *   Open `pom.xml`.
-    *   Remove the `spring-boot-starter-webmvc` dependency. This dependency is for Streamable HTTP, not Stdio.
+    *   Update the MCP server dependency. The `spring-ai-starter-mcp-server-webmvc` dependency is for Streamable HTTP, not Stdio.
 
+        Update the below line:-
         ```xml
-        <!-- Remove this dependency -->
-        <!-- <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webmvc</artifactId>
-        </dependency> -->
+        <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
         ```
-
+        With the following (removed `-webmvc`):-
+        ```xml
+        <artifactId>spring-ai-starter-mcp-server</artifactId>
+        ```
     *   Sync Maven changes and build the project.
 
 4.  **Application Properties Configuration:**
@@ -769,12 +769,12 @@ Creating an MCP server involves the following steps:
     *   Configure H2 database properties:
 
         ```properties
-        spring.datasource.url=jdbc:h2:mem:testdb
+        spring.datasource.url=jdbc:h2:file:~/chatmemory;AUTO_SERVER=true
         spring.datasource.driverClassName=org.h2.Driver
-        spring.datasource.username=sa
-        spring.datasource.password=
+        spring.datasource.username=madan
+        spring.datasource.password=12345
         spring.h2.console.enabled=true
-        spring.jpa.hibernate.ddl-auto=create-drop
+        spring.jpa.hibernate.ddl-auto=update
         ```
 
     *   Set the web application type to none:
@@ -787,27 +787,40 @@ Creating an MCP server involves the following steps:
     *   Disable logging:
 
         ```properties
-        logging.level.root=error
+        logging.level.root=ERROR
         ```
         ⚠️ **Warning:** Disabling logs is important to avoid interference with Stdio communication. The MCP server should not write unnecessary information to standard input or output.
+
+        📝 **Note:** If you want logs, then you can write it to a file (but don't write it to the standard input or output).
 
     *   Disable the Spring Boot banner:
 
         ```properties
         spring.main.banner-mode=off
         ```
-
 5.  **Java Code Implementation:**
-    *   Create the following packages: `entity`, `repository`, `service`, and `model`.
+    *   Create the following packages: `entity`, `repository`, `service`, `model`, and `tool`.
     *   **Entity Package:**
         *   Create `HelpDeskTicket.java`:
 
             ```java
-            // Example:
             @Entity
-            @Table(name = "help_desk_tickets")
+            @Table(name = "helpdesk_tickets")
+            @Getter
+            @Setter
+            @Builder
+            @NoArgsConstructor
+            @AllArgsConstructor
             public class HelpDeskTicket {
-                // ... fields like id, username, issue, status, createdAt, eta ...
+                @Id
+                @GeneratedValue(strategy = GenerationType.IDENTITY)
+                private Long id;
+
+                private String username;
+                private String issue;
+                private String status;
+                private LocalDateTime createdAt;
+                private LocalDateTime eta;
             }
             ```
 
@@ -815,7 +828,6 @@ Creating an MCP server involves the following steps:
         *   Create `HelpDeskTicketRepository.java`:
 
             ```java
-            // Example:
             public interface HelpDeskTicketRepository extends JpaRepository<HelpDeskTicket, Long> {
                 List<HelpDeskTicket> findByUsername(String username);
             }
@@ -825,10 +837,26 @@ Creating an MCP server involves the following steps:
         *   Create `HelpDeskTicketService.java`: This class will contain methods to create new tickets and query ticket details.
 
             ```java
-            // Example:
             @Service
+            @RequiredArgsConstructor
             public class HelpDeskTicketService {
-                // ... methods to create and query tickets ...
+
+                private final HelpDeskTicketRepository helpDeskTicketRepository;
+
+                public HelpDeskTicket createTicket(TicketRequest ticketRequest, String username) {
+                    HelpDeskTicket ticket = HelpDeskTicket.builder()
+                            .issue(ticketRequest.issue())
+                            .username(username)
+                            .status("open")
+                            .createdAt(LocalDateTime.now())
+                            .eta(LocalDateTime.now().plusDays(7))
+                            .build();
+                    return helpDeskTicketRepository.save(ticket);
+                }
+
+                public List<HelpDeskTicket> getTicketsByUsername(String username) {
+                    return helpDeskTicketRepository.findByUsername(username);
+                }
             }
             ```
 
@@ -836,7 +864,6 @@ Creating an MCP server involves the following steps:
         *   Create `TicketRequest.java`: A record class to accept issue details and username.
 
             ```java
-            // Example:
             public record TicketRequest(String issue, String username) {}
             ```
             📝 **Note:** Unlike previous examples, the username is now part of the request because the tool context is not available in a separate MCP server.
@@ -845,10 +872,42 @@ Creating an MCP server involves the following steps:
         *   Create `HelpDeskTools.java`: This class defines the tools for creating tickets and getting ticket status.
 
             ```java
-            // Example:
             @Component
+            @RequiredArgsConstructor
+            @Slf4j
             public class HelpDeskTools {
-                // ... tools for creating and getting ticket status ...
+
+                private final HelpDeskTicketService helpDeskTicketService;
+
+                @Tool(
+                        name = "createTicket",
+                        description = "Create a new Support ticket"
+                )
+                public String createTicket(
+                        @ToolParam(
+                                required = true,
+                                description = "Details to create a Support ticket"
+                        ) TicketRequest ticketRequest,
+                        ToolContext toolContext
+                ) {
+                    String username = (String) toolContext.getContext().get("username");
+                    log.info("Creating ticket for user: {}", username);
+                    HelpDeskTicket ticket = helpDeskTicketService.createTicket(ticketRequest, username);
+                    log.info("Ticket #{} created successfully for user: {}", ticket.getId(), username);
+                    return "Ticket #" + ticket.getId() + " created successfully for user: " + username;
+                }
+
+                @Tool(
+                        name = "getTicketStatus",
+                        description = "Fetch the status of the open tickets based on a given username"
+                )
+                public List<HelpDeskTicket> getTicketStatus(ToolContext toolContext) {
+                    String username = (String) toolContext.getContext().get("username");
+                    log.info("Fetching ticket status for user: {}", username);
+                    List<HelpDeskTicket> tickets = helpDeskTicketService.getTicketsByUsername(username);
+                    log.info("Found {} tickets for user: {}", tickets.size(), username);
+                    return tickets;
+                }
             }
             ```
 
@@ -857,12 +916,10 @@ Creating an MCP server involves the following steps:
     *   Create `MCPserverConfig.java`: This class exposes the tools from the MCP server.
 
         ```java
-        // Example:
         @Configuration
-        public class MCPserverConfig {
-
+        public class MCPServerConfig {
             @Bean
-            public List<ToolCallback> toolCallbacks(HelpDeskTools helpDeskTools) {
+            List<ToolCallback> toolCallbacks(HelpDeskTools helpDeskTools) {
                 return List.of(ToolCallbacks.from(helpDeskTools));
             }
         }
@@ -871,7 +928,7 @@ Creating an MCP server involves the following steps:
 
 ---
 
-## 9. Building an MCP Server with STDIO Transport
+## 9. Building an MCP Server with STDIO Transport - 2
 
 This section outlines the steps to build an MCP server and integrate it with a client application using STDIO transport.
 
@@ -881,27 +938,28 @@ This section outlines the steps to build an MCP server and integrate it with a c
 2.  Open your terminal and navigate to the project directory. ⚠️ **Warning:** Make sure you are in the directory containing the `pom.xml` file. You can verify this by running `ls` (or `dir` on Windows) and confirming the presence of `pom.xml`.
 
     ```bash
-    cd /path/to/your/mcp-server-project
+    cd ~/workspace/spring-ai/sec07-mcp/mcpserverstdio/
     ls # or dir on Windows
     ```
 3.  Execute the Maven command to generate the JAR file, skipping unit tests:
 
     ```bash
-    mvn clean install -Dmaven.test.skip=true
+    mvn clean install -DskipTests
     ```
 
     This command cleans the project, compiles the code, and packages it into a JAR file, skipping the unit tests.
-4.  The generated JAR file will be located in the `target` folder within your project directory. The JAR name will be similar to `MCP-server-stdio-0.0.1-SNAPSHOT.jar`.
+4.  The generated JAR file will be located in the `target` folder within your project directory. The JAR name will be similar to `mcpserverstdio-0.0.1-SNAPSHOT.jar`.
+5.  Test the generated JAR file by executing the following command: `java -jar target/mcpserverstdio-0.0.1-SNAPSHOT.jar` it should not show any error, any log message, banner, or any output.
 
 ### Inspecting the MCP Server with MCP Inspector 🔎
 
-1.  Start a new instance of MCP Inspector.
+1.  Start a new instance of MCP Inspector:- `npx @modelcontextprotocol/inspector`
 2.  Select the transport type as "Stdio".
-3.  Set the command to `Java`.
+3.  Set the command to `java`.
 4.  In the arguments, specify `-jar` followed by the complete path to your JAR file:
 
     ```
-    -jar /path/to/your/mcp-server-project/target/MCP-server-stdio-0.0.1-SNAPSHOT.jar
+    -jar /home/vikas/workspace/spring-ai/sec07-mcp/mcpserverstdio/target/mcpserverstdio-0.0.1-SNAPSHOT.jar
     ```
 
 5.  Click "Connect" to establish a connection between the MCP Inspector and your MCP server.
@@ -909,24 +967,20 @@ This section outlines the steps to build an MCP server and integrate it with a c
 
 ### Integrating with the MCP Client Application 🤝
 
-1.  Open the JSON configuration file in your MCP client application (usually located in the `resources` folder).
+1.  Open the JSON configuration file in your [MCP client application](/sec07-mcp/mcpclient/src/main/resources/mcp-servers.json) (usually located in the `resources` folder).
 2.  Add a new configuration for your MCP server. You can copy and paste the following snippet, adjusting the values to match your environment:
 
     ```json
-    {
-      "name": "spring-mcp",
-      "transport": "stdio",
-      "command": "/path/to/your/java/installation/java",
+    "spring-ai-mcp": {
+      "command": "/usr/bin/java",
       "args": [
         "-jar",
-        "/path/to/your/mcp-server-project/target/MCP-server-stdio-0.0.1-SNAPSHOT.jar"
+        "/home/vikas/workspace/spring-ai/sec07-mcp/mcpserverstdio/target/mcpserverstdio-0.0.1-SNAPSHOT.jar"
       ]
     }
     ```
-
-    *   `name`: A descriptive name for your MCP server configuration.
-    *   `transport`: Set to `stdio`.
-    *   `command`: The full path to your Java executable. Use `where java` in your terminal to find this path. ⚠️ **Warning:** This must be the full path, not just `java`.
+    *   `spring-ai-mcp`: The name you choose for your MCP server configuration, it can be any string.
+    *   `command`: The full path to your Java executable. Use `which java` in your terminal to find this path. ⚠️ **Warning:** This must be the full path, not just `java`.
     *   `args`: An array containing `-jar` and the full path to your JAR file.
 3.  Save the changes to the JSON configuration file.
 4.  Rebuild the MCP client application.
@@ -940,20 +994,26 @@ This section outlines the steps to build an MCP server and integrate it with a c
     @RequestHeader(value = "username", required = false) String username
     ```
 
-    📝 **Note:** Setting `required = false` makes the username optional for testing other integrations.
+    📝 **Note:** Setting `required = false` makes the username optional for testing other integrations. By default, required is true.
 3.  Append the username to the message sent to the LM model:
 
     ```java
-    message = message + " My username is " + username;
+    if(username!=null && !username.isBlank()){
+        message = "User: " + username + "\n" + message;
+    }
     ```
 4.  Save the changes and rebuild the MCP client application.
 
 ### Testing the Integration ✅
 
 1.  Restart the MCP client application. The application will automatically start the MCP server based on the configuration.
-2.  Send a request to the LM model with a message that triggers a tool exposed by your MCP server.
+2.  Send a request to the LM model with a message that triggers a tool exposed by your MCP server:- `curl --location 'http://localhost:8080/api/chat?message=Who%20are%20you%20and%20how%20you%20can%20help%20me' \
+--header 'username: testUser99'`
 3.  Include a `username` header in the request.
-4.  Verify that the MCP server successfully invokes the tool and returns the expected response. 📌 **Example:** Send a message like "I am not able to access my cabin. The access card is not working." with the username "modern25".
+4.  Verify that the MCP server successfully invokes the tool and returns the expected response. 📌 **Example:** Send a message like "I am not able to access my cabin. The access card is not working." with the some username:- `curl --location 'http://localhost:8080/api/chat?message=I%20am%20not%20able%20to%20access%20my%20cabin.%20The%20access%20card%20is%20not%20working.' \
+--header 'username: testUser99'`
+5. Verify other tool:- `curl --location 'http://localhost:8080/api/chat?message=What%20is%20the%20status%20of%20my%20ticket%3F' \
+--header 'username: testUser99'`
 
 ### Key Considerations 🔑
 
@@ -970,49 +1030,47 @@ This section outlines the steps to build an MCP server and integrate it with a c
 This note details the process of creating an MCP server that supports remote invocation using the Spring framework. We'll convert an existing MCP server based on Stdio transport to one that can be invoked remotely.
 
 1.  **Copy and Rename the Project:** 
-    *   Start by copying the existing MCP server Stdio project within the workspace.
-    *   Rename the copied project to "MCP Server Remote".
+    *   Start by copying the existing `mcpserverstdio` project within the workspace.
+    *   Rename the copied project to `mcpserverremote`.
 
 2.  **Clean the Target Folder:**
-    *   Open the "MCP Server Remote" folder.
+    *   Open the "mcpserverremote" folder.
     *   Delete the contents of the `target` folder to ensure fresh compilation.
 
 3.  **Update `pom.xml`:**
     *   Open the `pom.xml` file.
-    *   Modify the `<name>` tag from "MCP server Stdio" to "MCP server Remote".
+    *   Modify the `<name>` and `<artifactId>` tag from "mcpserverstdio" to "mcpserverremote".
     *   Update the `<description>` tag to "Demo project for MCP server using remote invocation".
     *   Save the `pom.xml` file.
 
 4.  **Import the Project into IntelliJ:**
     *   In IntelliJ, go to `File` -> `New` -> `Module from Existing Sources`.
-    *   Select the "MCP Server Remote" folder and click `Open`.
+    *   Select the "mcpserverremote" folder and click `Open`.
     *   Confirm that it's a Maven project.
 
 5.  **Modify Dependencies in `pom.xml`:**
-    *   Replace the `mcp-server-starter-stdio` dependency with `spring-ai-starter-mcp-server-webmvc`.
-        ```xml
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
-        </dependency>
-        ```
+    *   Replace the `spring-ai-starter-mcp-server` dependency with `spring-ai-starter-mcp-server-webmvc`.
     *   📝 **Note:** If you're building a Spring Reactive application, use the `webflux` dependency instead.
     *   Save the `pom.xml` file and sync the Maven changes.
 
 6.  **Update `application.properties`:**
     *   Remove the following three properties related to Stdio transport:
-        *   `spring.ai.mcp.server.stdio.enabled`
-        *   `spring.ai.mcp.server.stdio.input`
-        *   `spring.ai.mcp.server.stdio.output`
+        ```properties
+        spring.main.web-application-type=none
+        logging.level.root=ERROR
+        spring.main.banner-mode=off
+        ```
     *   Add the following properties:
-        *   `logging.pattern.console=%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%-5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx`
-        *   `server.port=8090`
+        ```properties
+        logging.pattern.console=%green(%d{HH:mm:ss.SSS}) %blue(%-5level) %red([%thread]) %yellow(%logger{15}) - %msg%n
+        server.port=8090
+        ```
     *   📝 **Note:**  The `server.port` can be any available port. 8080 is often used by other applications.
     *   Save the `application.properties` file.
 
 7.  **Rename the Main Application Class and Package (Optional but Recommended):**
-    *   Rename `MCP Server Stdio Application` to `MCP Server Remote Application`.
-    *   Refactor the package name from `mcp.server.stdio` to `mcp.server.remote`.  Select "All in selected module" during refactoring.
+    *   Rename `McpserverstdioApplication` to `McpServerRemoteApplication`.
+    *   Refactor the package name from `mcpserverstdio` to `mcpserverremote`.  Select "All in selected module" during refactoring.
 
 8.  **Build the Project:**
     *   Build the project to ensure all changes are compiled.
@@ -1022,19 +1080,18 @@ This note details the process of creating an MCP server that supports remote inv
     *   Verify that the MCP server starts on port 8090.
 
 10. **Inspect with MCP Inspector:**
-    *   Open the MCP Inspector.
-    *   Select either `HTTP` or `SSC` as the transport type.
-    *   Enter the URL: `http://localhost:8090/ssc`.
+    *   Open the MCP Inspector (`npx @modelcontextprotocol/inspector`).
+    *   Select either `Streamable HTTP` or `SSE` as the transport type.
+    *   Enter the URL: `http://localhost:8090/sse`. (Don't change the path `/sse`)
     *   Click `Connect`.
-    *   ⚠️ **Warning:** The `Streamable` transport type may not be supported by the Spring framework at the time of this writing.
+    *   ⚠️ **Warning:** The `Streamable HTTP` transport type may not be supported by the Spring framework at the time of this writing. If it is not available, use `SSE` instead. In the future, the `Streamable HTTP` transport type may be supported.
     *   Go to `Tools` -> `List Tools` to confirm the server is running and exposing tools.
 
 11. **Integrate with MCP Client:**
-    *   Create a new file named `mcp-servers-stdio.json` under the `resources` folder and move the Stdio based MCP server configurations to this file.
-    *   Remove the Stdio based MCP server configurations from the original `mcp-servers.json` file.
+    *   Remove the Stdio based MCP server configurations from the `mcp-servers.json` file.
     *   Add the following property to `application.properties`:
-        *   `spring.ai.mcp.client.ssc.connections.easybytes.url=http://localhost:8090/ssc`
-    *   📝 **Note:** Replace `easybytes` with a suitable connection name.
+        *   `spring.ai.mcp.client.sse.connections.knowprogram.url=http://localhost:8090`
+    *   📝 **Note:** Replace `knowprogram` with a suitable connection name.
     *   📝 **Note:** In a real-world application, replace `localhost` with the actual hostname or IP address of the MCP server.
 
 12. **Rebuild and Restart the Client:**
