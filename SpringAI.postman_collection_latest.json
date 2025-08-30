@@ -1,0 +1,980 @@
+{
+	"info": {
+		"_postman_id": "1178e5cd-bc47-4aba-9525-56d1493d8c29",
+		"name": "SpringAI",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "40559830"
+	},
+	"item": [
+		{
+			"name": "Section01",
+			"item": [
+				{
+					"name": "chat",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/chat?message=What is your name and which model you are using ?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"chat"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "What is your name and which model you are using ?"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Joke",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/chat?message=Tell me a joke about Spring Boot ?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"chat"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "Tell me a joke about Spring Boot ?"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "MultiModelOpenAIChat",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/openai/chat?message=What is your name and which model you are using ?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"openai",
+								"chat"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "What is your name and which model you are using ?"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "MultiModelOllamaChat",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/ollama/chat?message=What is your name and which model you are using ?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"ollama",
+								"chat"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "What is your name and which model you are using ?"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Section02",
+			"item": [
+				{
+					"name": "chat",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/chat?message=What is your name and which model you are using ?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"chat"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "What is your name and which model you are using ?"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "IT help",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/it-help?message=What is your name and which model you are using ?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"it-help"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "What is your name and which model you are using ?"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "IT help",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseURL}}/api/it-help?message=What is your name and which model you are using ?",
+									"host": [
+										"{{baseURL}}"
+									],
+									"path": [
+										"api",
+										"it-help"
+									],
+									"query": [
+										{
+											"key": "message",
+											"value": "What is your name and which model you are using ?"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain;charset=UTF-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "211"
+								},
+								{
+									"key": "Date",
+									"value": "Sat, 09 Aug 2025 04:16:52 GMT"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=60"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								}
+							],
+							"cookie": [],
+							"body": "I'm here to assist you with IT-related issues, such as resetting passwords or unlocking accounts. Unfortunately, I can't provide information about my name or model. How can I assist you with your IT needs today?"
+						}
+					]
+				},
+				{
+					"name": "IT help - how to reset my password",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/it-help?message=how to reset my password?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"it-help"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "how to reset my password?"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "IT help",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseURL}}/api/it-help?message=What is your name and which model you are using ?",
+									"host": [
+										"{{baseURL}}"
+									],
+									"path": [
+										"api",
+										"it-help"
+									],
+									"query": [
+										{
+											"key": "message",
+											"value": "What is your name and which model you are using ?"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain;charset=UTF-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "211"
+								},
+								{
+									"key": "Date",
+									"value": "Sat, 09 Aug 2025 04:16:52 GMT"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=60"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								}
+							],
+							"cookie": [],
+							"body": "I'm here to assist you with IT-related issues, such as resetting passwords or unlocking accounts. Unfortunately, I can't provide information about my name or model. How can I assist you with your IT needs today?"
+						}
+					]
+				},
+				{
+					"name": "UserPromptTemplate",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/email?customerName=Madan&customerMessage=I am not able to access my account, it says account locked. please help",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"email"
+							],
+							"query": [
+								{
+									"key": "customerName",
+									"value": "Madan"
+								},
+								{
+									"key": "customerMessage",
+									"value": "I am not able to access my account, it says account locked. please help"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "UserPromptTemplate",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseURL}}/api/email?customerName=Madan&customerMessage=I am not able to access my account, it says account locked. please help",
+									"host": [
+										"{{baseURL}}"
+									],
+									"path": [
+										"api",
+										"email"
+									],
+									"query": [
+										{
+											"key": "customerName",
+											"value": "Madan"
+										},
+										{
+											"key": "customerMessage",
+											"value": "I am not able to access my account, it says account locked. please help"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain;charset=UTF-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "1026"
+								},
+								{
+									"key": "Date",
+									"value": "Sat, 09 Aug 2025 04:43:35 GMT"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=60"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								}
+							],
+							"cookie": [],
+							"body": "Dear Madan,\n\nThank you for reaching out to us. I understand how concerning it can be when you are unable to access your account, and I’m here to assist you.\n\nAn account lock can occur for several reasons, typically for security purposes. To help you regain access, I recommend following these steps:\n\n1. Please check your email for any messages from us regarding your account status, as it may contain instructions on how to unlock it.\n2. If you haven’t received any emails, you can try resetting your password using the “Forgot Password” link on the login page. This often resolves access issues.\n3. If the problem persists, please provide me with any relevant details, such as the email associated with your account, and I will escalate this issue to our support team for further assistance.\n\nRest assured, we are committed to resolving this matter as quickly as possible so you can access your account without further delay. \n\nThank you for your patience, and I look forward to assisting you further.\n\nBest regards,"
+						}
+					]
+				},
+				{
+					"name": "PromptStuffing",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/prompt-stuffing?message=I used 5 leaves in this year. How many will be forwarded to next year",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"prompt-stuffing"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "I used 5 leaves in this year. How many will be forwarded to next year"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "ChatBean",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/chat-bean?message=Provide me the cities details in USA ?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"chat-bean"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "Provide me the cities details in USA ?"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "ChatList",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/chat-list?message=Provide me the cities details in USA ?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"chat-list"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "Provide me the cities details in USA ?"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "ChatMap",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/chat-map?message=Provide me the cities details in USA ?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"chat-map"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "Provide me the cities details in USA ?"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "ChatBeanList",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/chat-bean-list?message=Provide me the country and their cities details in Europe ?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"chat-bean-list"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "Provide me the country and their cities details in Europe ?"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Section04",
+			"item": [
+				{
+					"name": "ChatMemory",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "username",
+								"value": "madan03",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/api/chat-memory?message=What is my name?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"chat-memory"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "What is my name?"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Section05",
+			"item": [
+				{
+					"name": "RAG-RANDOM",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "username",
+								"value": "testUser99",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/api/rag/random/chat?message=What is the current time in London?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"rag",
+								"random",
+								"chat"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "What is the current time in London?"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "RAG-DOCUMENT",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "username",
+								"value": "testUser99",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/api/rag/document/chat?message=Tell me about the notice period.",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"rag",
+								"document",
+								"chat"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "Tell me about the notice period."
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Section06",
+			"item": [
+				{
+					"name": "LOCAL-TIME",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "username",
+								"value": "testUser19",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/api/tools/local-time?message=What is the current time in Frankfurt?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"tools",
+								"local-time"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "What is the current time in Frankfurt?"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "HELP-DESK",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "username",
+								"value": "madan24",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/api/tools/help-desk?message=What is the status of my ticket?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"tools",
+								"help-desk"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "What is the status of my ticket?"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Section07",
+			"item": [
+				{
+					"name": "MCPCLIENT",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "username",
+								"value": "testUser99",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/api/chat?message=What is the status of my ticket?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"chat"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "What is the status of my ticket?"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Section08",
+			"item": [
+				{
+					"name": "SelfEvalChat",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/evaluate/chat?message=What is the capital of India ?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"evaluate",
+								"chat"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "What is the capital of India ?"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Section_10",
+			"item": [
+				{
+					"name": "TranscribeBasic",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/transcribe",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"transcribe"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TranscribeOptions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/transcribe-options",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"transcribe-options"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "SpeechBasic",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/speech?message=How are you my friend?",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"speech"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "How are you my friend?"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "SpeechOptions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/speech-options?message=Spring AI is an exciting framework that simplifies building AI-powered applications. It integrates seamlessly with Spring Boot, enabling developers to leverage large language models and create intelligent, scalable solutions with ease",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"speech-options"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "Spring AI is an exciting framework that simplifies building AI-powered applications. It integrates seamlessly with Spring Boot, enabling developers to leverage large language models and create intelligent, scalable solutions with ease"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "ImageBasic",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/image?message=Black-and-white close-up of a smiling woman with closed eyes, her hair framing her face naturally, exuding warmth and joy.",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"image"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "Black-and-white close-up of a smiling woman with closed eyes, her hair framing her face naturally, exuding warmth and joy."
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "ImageBasic",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseURL}}/api/image?message=Black-and-white close-up of a smiling woman with closed eyes, her hair framing her face naturally, exuding warmth and joy.",
+									"host": [
+										"{{baseURL}}"
+									],
+									"path": [
+										"api",
+										"image"
+									],
+									"query": [
+										{
+											"key": "message",
+											"value": "Black-and-white close-up of a smiling woman with closed eyes, her hair framing her face naturally, exuding warmth and joy."
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain;charset=UTF-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "474"
+								},
+								{
+									"key": "Date",
+									"value": "Sat, 30 Aug 2025 18:31:55 GMT"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=60"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								}
+							],
+							"cookie": [],
+							"body": "https://oaidalleapiprodscus.blob.core.windows.net/private/org-nocdOM1P5Kv9wKXIk0Zocj8l/user-tuk7cNCoCDTiNfrgaYyydGB9/img-9og1qEMN33SkMcYPCoYJiLU2.png?st=2025-08-30T17%3A31%3A55Z&se=2025-08-30T19%3A31%3A55Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=b1a0ae1f-618f-4548-84fd-8b16cacd5485&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-08-30T09%3A02%3A25Z&ske=2025-08-31T09%3A02%3A25Z&sks=b&skv=2024-08-04&sig=XZ56yh8mYlRojbmxMkzBPMWnlGI39I%2BDRrCCGQ3ptiA%3D"
+						}
+					]
+				},
+				{
+					"name": "ImageOptions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/api/image-options?message=Three people collaborate in a modern office, discussing a presentation projected on the wall. Minimalist design with warm lighting",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"image-options"
+							],
+							"query": [
+								{
+									"key": "message",
+									"value": "Three people collaborate in a modern office, discussing a presentation projected on the wall. Minimalist design with warm lighting"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "ImageOptions",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseURL}}/api/image-options?message=Three people collaborate in a modern office, discussing a presentation projected on the wall. Minimalist design with warm lighting",
+									"host": [
+										"{{baseURL}}"
+									],
+									"path": [
+										"api",
+										"image-options"
+									],
+									"query": [
+										{
+											"key": "message",
+											"value": "Three people collaborate in a modern office, discussing a presentation projected on the wall. Minimalist design with warm lighting"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain;charset=UTF-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "472"
+								},
+								{
+									"key": "Date",
+									"value": "Sat, 30 Aug 2025 18:40:03 GMT"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=60"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								}
+							],
+							"cookie": [],
+							"body": "https://oaidalleapiprodscus.blob.core.windows.net/private/org-nocdOM1P5Kv9wKXIk0Zocj8l/user-tuk7cNCoCDTiNfrgaYyydGB9/img-FsEl4W8OCDfM0U9ftxwWuCqf.png?st=2025-08-30T17%3A40%3A02Z&se=2025-08-30T19%3A40%3A02Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=b1a0ae1f-618f-4548-84fd-8b16cacd5485&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-08-29T19%3A02%3A27Z&ske=2025-08-30T19%3A02%3A27Z&sks=b&skv=2024-08-04&sig=jWh/mqeJ6nUekIx5OtPUEGo/iXJxI08kd4pu/pbm/As%3D"
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseURL",
+			"value": "http://localhost:8080",
+			"type": "default"
+		}
+	]
+}

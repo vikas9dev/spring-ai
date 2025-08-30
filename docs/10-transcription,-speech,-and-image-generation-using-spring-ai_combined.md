@@ -2,10 +2,25 @@
 
 
 Sections-
-1. [Leveraging Spring AI for Audio Transcription](#1-leveraging-spring-ai-for-audio-transcription)
-2. [Understanding OpenAI Audio Transcription Behind the Scenes](#2-understanding-openai-audio-transcription-behind-the-scenes)
-3. [Generating Speech from Text using Jenny Models](#3-generating-speech-from-text-using-jenny-models)
-4. [Generating Images with Spring AI and OpenAI](#4-generating-images-with-spring-ai-and-openai)
+- [10 Transcription, Speech, And Image Generation Using Spring Ai](#10-transcription-speech-and-image-generation-using-spring-ai)
+  - [1. Leveraging Spring AI for Audio Transcription](#1-leveraging-spring-ai-for-audio-transcription)
+    - [Setting Up the Project](#setting-up-the-project)
+    - [Creating the Audio Controller](#creating-the-audio-controller)
+    - [Running the Application](#running-the-application)
+  - [2. Understanding OpenAI Audio Transcription Behind the Scenes](#2-understanding-openai-audio-transcription-behind-the-scenes)
+    - [Customizing Transcription Requests with Options](#customizing-transcription-requests-with-options)
+    - [Default Model and Customization](#default-model-and-customization)
+    - [OpenAI Audio and Speech API](#openai-audio-and-speech-api)
+    - [Limitations and Supported Languages](#limitations-and-supported-languages)
+  - [3. Generating Speech from Text using Gen AI Models](#3-generating-speech-from-text-using-gen-ai-models)
+  - [4. Generating Images with Spring AI and OpenAI](#4-generating-images-with-spring-ai-and-openai)
+    - [Creating an Image Controller](#creating-an-image-controller)
+    - [Understanding ImagePrompt](#understanding-imageprompt)
+    - [Building a Simple REST API](#building-a-simple-rest-api)
+    - [Testing the API](#testing-the-api)
+    - [Configuring Image Options](#configuring-image-options)
+    - [Testing with Options](#testing-with-options)
+    - [Exploring Other Image Models](#exploring-other-image-models)
 
 
 ---
@@ -41,9 +56,9 @@ For this demo, I've created a basic Spring application. Here's how to configure 
 
     ```properties
     spring.application.name=audio-transcription-demo
-    logging.pattern.console=%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx
-    logging.level.org.springframework.ai=DEBUG
+    logging.pattern.console=%green(%d{HH:mm:ss.SSS}) %blue(%-5level) %red([%thread]) %yellow(%logger{15}) - %msg%n
     spring.ai.openai.api-key=${OPENAI_API_KEY}
+    logging.level.org.springframework.ai.chat.client.advisor=DEBUG
     ```
 
     ⚠️ **Warning:**  Make sure to set the `OPENAI_API_KEY` environment variable. You can do this in your IDE's run configuration.
@@ -54,29 +69,18 @@ For this demo, I've created a basic Spring application. Here's how to configure 
 2.  Inside the `controller` package, create a Java class named `AudioController`.
 
     ```java
-    package com.example.ai.controller;
-
-    import org.springframework.ai.openai.audio.OpenAIAutoTranscriptionModel;
-    import org.springframework.beans.factory.annotation.Value;
-    import org.springframework.core.io.Resource;
-    import org.springframework.web.bind.annotation.GetMapping;
-    import org.springframework.web.bind.annotation.RestController;
-
     @RestController
+    @RequestMapping("/api")
     public class AudioController {
+        private final OpenAiAudioTranscriptionModel openAiAutoTranscriptionModel;
 
-        private final OpenAIAutoTranscriptionModel openAIAutoTranscriptionModel;
-
-        @Value("classpath:springai.mp3")
-        private Resource audioFile;
-
-        public AudioController(OpenAIAutoTranscriptionModel openAIAutoTranscriptionModel) {
-            this.openAIAutoTranscriptionModel = openAIAutoTranscriptionModel;
+        public AudioController(OpenAiAudioTranscriptionModel openAiAutoTranscriptionModel) {
+            this.openAiAutoTranscriptionModel = openAiAutoTranscriptionModel;
         }
 
         @GetMapping("/transcribe")
-        public String transcribe() {
-            return openAIAutoTranscriptionModel.call(audioFile);
+        public String transcribe(@Value("classpath:SpringAI.mp3") Resource audioFile) {
+            return openAiAutoTranscriptionModel.call(audioFile);
         }
     }
     ```
@@ -90,20 +94,7 @@ For this demo, I've created a basic Spring application. Here's how to configure 
 
 5.  Inject `OpenAIAutoTranscriptionModel` using constructor injection.
 6.  Create a `GET` endpoint `/transcribe` that takes an audio file as input and returns the transcribed text.
-
-    ```java
-    @GetMapping("/transcribe")
-    public String transcribe() {
-        return openAIAutoTranscriptionModel.call(audioFile);
-    }
-    ```
-
 7.  Load the audio file from the classpath using `@Value`.
-
-    ```java
-    @Value("classpath:springai.mp3")
-    private Resource audioFile;
-    ```
 
     📝 **Note:**  In real applications, you would typically load the audio file from a storage system or accept it through a UI.
 
@@ -113,15 +104,11 @@ For this demo, I've created a basic Spring application. Here's how to configure 
 
 9.  Invoke the `call` method of the `OpenAIAutoTranscriptionModel` to transcribe the audio file.
 
-    ```java
-    return openAIAutoTranscriptionModel.call(audioFile);
-    ```
-
 ### Running the Application
 
 1.  Build the application.
 2.  Run the application in debug mode.
-3.  Use Postman or a similar tool to invoke the `/transcribe` endpoint.  No request body is needed as the audio file is loaded from the classpath.
+3.  Use Postman or a similar tool to invoke the `/transcribe` endpoint (`curl --location 'http://localhost:8080/api/transcribe'`).  No request body is needed as the audio file is loaded from the classpath.
 4.  The response will contain the transcribed text from the audio file.
 
 The transcribed text should closely match the content of the audio file. Spring AI simplifies the process of using LLMs, allowing developers to focus on business problems rather than the complexities of AI.
@@ -148,7 +135,7 @@ The supported audio file types are:
 
 There's also another constructor that accepts both the audio file and audio transcription options.
 
-Let's explore the `OpenAI audio transcription options` interface.
+Let's explore the `AudioTranscriptionOptions` interface.
 
 By using the options class, we can customize our request by configuring various options. 📌 **Example:**
 
@@ -157,7 +144,7 @@ By using the options class, we can customize our request by configuring various 
 *   **Language:** Specify the language of the audio.
 *   **Temperature:** Adjust the temperature value (default is 0.7).
 
-Let's look at the `transcript response format` enum.
+Let's look at the `TranscriptResponseFormat` enum.
 
 The enum constants include:
 *   JSON
@@ -170,7 +157,7 @@ By default, the output is in text format. We can configure it to use other forma
 
 ### Customizing Transcription Requests with Options
 
-Let's see a demo of using `OpenAI audio transcription options` to customize our transcription request.
+Let's see a demo of using `OpenAiAudioTranscriptionOptions` to customize our transcription request.
 
 If you don't need customizations, the simple `call` method (accepting only the audio file) is sufficient. However, for enterprise scenarios, customizations are often required.
 
@@ -183,12 +170,22 @@ Here's how to use the audio transcription options:
     *   Provide a list of options.
 
 ```java
-OpenAI audioTranscriptionOptions.builder()
-    .prompt("talking about spring ai")
-    .language("en")
-    .temperature(0.5f)
-    .responseFormat(OpenAI.Audio.Api.TranscriptResponseFormat.VTT)
-    .build();
+@GetMapping("/transcribe-options")
+public String transcribeWithOptions(@Value("classpath:SpringAI.mp3") Resource audioFile) {
+    var audioTranscriptionResponse = openAiAutoTranscriptionModel.call(
+        new AudioTranscriptionPrompt(
+            audioFile,
+            OpenAiAudioTranscriptionOptions.builder()
+                .prompt("Talking about Spring AI")
+                .language("en")
+                .temperature(0.5f)
+                .responseFormat(OpenAiAudioApi.TranscriptResponseFormat.VTT)
+                .build()
+        )
+    );
+
+    return audioTranscriptionResponse.getResult().getOutput();
+}
 ```
 
 *   **Prompt:** Give a clue to the model. 📌 **Example:** "talking about spring ai".
@@ -202,14 +199,21 @@ By providing language and prompt details, you simplify the model's job. 💡 **T
 
 The `VTT` format is used for generating subtitles. It provides timestamps for each line of text, which is useful for video players.
 
-The `call` method that accepts the `audio transcription prompt` returns an `audio transcription response`. Extract the output from this response object.
+The `call` method that accepts the `AudioTranscriptionPrompt` returns an `AudioTranscriptionResponse`. Extract the output from this response object.
 
-```java
-AudioTranscriptionResponse audioTranscriptionResponse = openAIClient.audio().transcribe(audioTranscriptionPrompt);
-return audioTranscriptionResponse.getResult().getOutput();
-```
+API call:- `curl --location 'http://localhost:8080/api/transcribe-options'`
 
 The API will now return the output in the specified format (e.g., VTT).
+
+```vtt
+WEBVTT
+
+00:00:00.000 --> 00:00:05.280
+Spring AI makes it easy to integrate large language models into your Spring Boot applications.
+
+00:00:05.280 --> 00:00:09.040
+It's powerful, flexible, and designed for Java developers.
+```
 
 ### Default Model and Customization
 
@@ -217,9 +221,9 @@ For most scenarios, the default model and text format are sufficient. However, y
 
 To determine the default model, set a breakpoint inside the `call` method and inspect the `create request` method.
 
-The default model is `whisper-1`.
+The default model is `whisper-1`. On output, `whisper-1` supports a range of formats (json, text, srt, verbose_json, vtt); the newer `gpt-4o-mini-transcribe` and `gpt-4o-transcribe` snapshots currently only support json or plain text responses.
 
-If you need to use a different model, consult the OpenAI documentation and choose the best model for your use case.
+If you need to use a different model, consult the OpenAI documentation and choose the best model for your use case. See more [here](https://platform.openai.com/docs/guides/speech-to-text).
 
 ### OpenAI Audio and Speech API
 
@@ -227,16 +231,7 @@ The OpenAI platform has a section dedicated to audio and speech. It highlights u
 
 ### Limitations and Supported Languages
 
-⚠️ **Warning:** File uploads are currently limited to 25 MB.
-
-Supported input types include:
-*   MP3
-*   MP4
-*   MPEG
-*   MPG
-*   M4A
-*   WAV
-*   WebM
+⚠️ File uploads are currently limited to 25 MB, and the following input file types are supported: mp3, mp4, mpeg, mpga, m4a, wav, and webm.
 
 Your audio file can be in any of the supported languages listed on the OpenAI website. However, the output is currently only supported in English.
 
@@ -244,17 +239,17 @@ Hopefully, this clarifies how to implement the transcription process using OpenA
 
 ---
 
-## 3. Generating Speech from Text using Jenny Models
+## 3. Generating Speech from Text using Gen AI Models
 
-Jenny models can be used to generate speech or audio files from a given text, which is the opposite of transcription. 🗣️
+Gen AI models can be used to generate speech or audio files from a given text, which is the opposite of transcription. 🗣️
 
 In **text-to-speech**, the input is text (prompts), and the output is a speech, voice, or audio file.
 
-You can request Jenny models to generate various styles of voices or speeches, such as male or female voices, based on your requirements. 🧑‍💼👩‍💼
+You can request Gen AI models to generate various styles of voices or speeches, such as male or female voices, based on your requirements. 🧑‍💼👩‍💼
 
 These features can be used in various enterprise application scenarios.
 
-📌 **Example:** A bank application can use text-to-speech to send IVR notifications to customers about credit card bill due dates. Instead of robotic-sounding IVR messages, Jenny models can generate more natural-sounding voices.
+📌 **Example:** A bank application can use text-to-speech to send IVR notifications to customers about credit card bill due dates. Instead of robotic-sounding IVR messages, Gen AI models can generate more natural-sounding voices.
 
 Let's look at a demo of converting text to speech.
 
@@ -277,25 +272,29 @@ private SpeechModel speechModel;
 Next, create a REST API for speech generation.
 
 ```java
-@RestController
-public class AudioController {
+@Autowired
+private final SpeechModel speechModel;
 
-    @Autowired
-    private SpeechModel speechModel;
+// In Constructor
+public AudioController(..., SpeechModel speechModel) {
+    // ...
+    this.speechModel = speechModel;
+}
 
-    @GetMapping("/speech")
-    public String generateSpeech(@RequestParam String message) throws IOException {
-        byte[] audioBytes = speechModel.call(message);
-        Path path = Paths.get("output.mp3");
-        Files.write(path, audioBytes);
-        return "MP3 saved successfully to output.mp3";
-    }
+@GetMapping("/speech")
+public String speech(@RequestParam String message) throws IOException {
+    byte[] audioBytes = speechModel.call(message);
+
+    Path path = Paths.get("output.mp3");
+    Files.write(path, audioBytes);
+
+    return "MP3 saved successfully to " + path.toAbsolutePath();
 }
 ```
 
 This REST API accepts a message as a request parameter and passes it to the `call` method of the `SpeechModel`. The returned byte array is then saved as an MP3 file.
 
-After building the application, you can trigger the `/speech` REST API from Postman with a message like "How are you my friend?". This will create an `output.mp3` file with the generated speech.
+After building the application, you can trigger the `/speech` REST API from Postman with a message like "How are you my friend?" (`curl --location 'http://localhost:8080/api/speech?message=How%20are%20you%20my%20friend%3F'`). This will create an `output.mp3` file with the generated speech.
 
 In the example above, we invoked the `call` method directly with the message. Behind the scenes, it creates a `SpeechPrompt` object.
 
@@ -315,25 +314,26 @@ Let's configure these options and generate another audio file.
 
 ```java
 @GetMapping("/speech-options")
-public String generateSpeechWithOptions(@RequestParam String message) throws IOException {
-    SpeechPrompt speechPrompt = SpeechPrompt.builder()
-            .message(message)
-            .options(OpenAIaudioSpeechOptions.builder()
-                    .voice(OpenAIaudioSpeechOptions.Voice.NOVA)
-                    .speed(2.0f)
-                    .responseFormat(OpenAIaudioSpeechOptions.ResponseFormat.MP3)
-                    .build())
-            .build();
+public String speechWithOptions(@RequestParam String message) throws IOException {
+    SpeechResponse speechResponse = speechModel.call(
+        new SpeechPrompt(
+            message,
+            OpenAiAudioSpeechOptions.builder()
+                .voice(OpenAiAudioApi.SpeechRequest.Voice.NOVA)
+                .speed(2.0f)
+                .responseFormat(OpenAiAudioApi.SpeechRequest.AudioResponseFormat.MP3)
+                .build()
+        )
+    );
 
-    SpeechResponse speechResponse = speechModel.call(speechPrompt);
-    byte[] audioBytes = speechResponse.getResult().getOutput();
     Path path = Paths.get("speech-options.mp3");
-    Files.write(path, audioBytes);
-    return "MP3 saved successfully to speech-options.mp3";
+    Files.write(path, speechResponse.getResult().getOutput());
+
+    return "MP3 saved successfully to " + path.toAbsolutePath();
 }
 ```
 
-This API creates a `SpeechPrompt` object with configured options (voice, speed, and response format) and passes it to the `call` method.
+This API creates a `SpeechPrompt` object with configured options (voice, speed, and response format) and passes it to the `call` method:- `curl --location 'http://localhost:8080/api/speech-options?message=Spring%20AI%20is%20an%20exciting%20framework%20that%20simplifies%20building%20AI-powered%20applications.%20It%20integrates%20seamlessly%20with%20Spring%20Boot%2C%20enabling%20developers%20to%20leverage%20large%20language%20models%20and%20create%20intelligent%2C%20scalable%20solutions%20with%20ease'`
 
 After building, you can invoke the `/speech-options` API with a message. The generated audio file will have the configured voice and speed.
 
@@ -354,6 +354,7 @@ First, we'll create a new controller named `ImageController`.
 
 ```java
 @RestController
+@RequestMapping("/api")
 public class ImageController {
 
     private final ImageModel imageModel;
@@ -421,22 +422,26 @@ Available options include:
 *   `quality`: Image quality (`normal` or `hd`).
 *   `responseFormat`: Response format (`url` or `b64_json`).
 *   `size`: Image size (e.g., "256x256").
-*   `style`: Image style (`vivid` or `natural`). `vivid` produces hyper-real images, while `natural` produces more natural-looking images. This is only supported for Dall-E 3.
+*   `style`: Image style (`vivid` or `natural`). `vivid` produces hyper-real images, while `natural` produces more natural-looking images. This parameter is only supported for Dall-E 3.
 *   `user`: User identifier (username or email) for monitoring and abuse detection.
 
 ```java
 @GetMapping("/image-options")
 public String generateImageWithOptions(@RequestParam("message") String message) {
-    OpenAIImageOptions options = OpenAIImageOptions.builder()
-        .n(1)
-        .quality("hd")
-        .style("natural")
-        .height(1024)
-        .width(1024)
-        .responseFormat("url")
-        .build();
+    var imageResponse = imageModel.call(
+        new ImagePrompt(
+            message,
+            OpenAiImageOptions.builder()
+                .N(1)
+                .quality("hd")
+                .style("natural")
+                .height(1024)
+                .width(1024)
+                .responseFormat("url")
+                .build()
+        )
+    );
 
-    ImageResponse imageResponse = imageModel.call(new ImagePrompt(message, options));
     return imageResponse.getResult().getOutput().getUrl();
 }
 ```
@@ -456,3 +461,5 @@ Invoke the `/image-options` endpoint with a message and the configured options. 
 Spring AI supports various image models. While this example uses OpenAI, you can explore other models like Stability AI. ⚠️ **Warning:** Each model may require a separate billing account. Always refer to the Spring AI documentation for more details.
 
 ---
+
+EazyBytes GitHub: [https://github.com/eazybytes/spring-ai](https://github.com/eazybytes/spring-ai)
