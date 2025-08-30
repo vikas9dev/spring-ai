@@ -86,8 +86,8 @@ The first step is to add the Spring Boot Actuator dependency to your `pom.xml` f
 
     ```xml
     <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-actuator</artifactId>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
     ```
 
@@ -104,7 +104,7 @@ Before starting the application, ensure Docker Desktop is running in the backgro
 
 Once the application is running, you can access the actuator endpoint to view exposed APIs.
 
-1.  Access the actuator endpoint using the URL: `http://localhost:8080/actuator`
+1.  Access the actuator endpoint using the URL: [http://localhost:8080/actuator](http://localhost:8080/actuator)
     ⚠️ **Warning:** Do not include a trailing slash `/` in the URL, as it will result in an error.
 2.  Initially, only the `/health` endpoint is exposed by default.
 
@@ -136,8 +136,10 @@ After restarting the application, refresh the actuator endpoint in your browser.
 
 To generate more metrics, test the RAG document and tool-related APIs.
 
-1.  Test the RAG document API by sending a request like "Tell me about the notice period."
-2.  Invoke the tool-related API, such as requesting the current time in London.
+1.  Test the RAG document API by sending a request like "Tell me about the notice period.":- `curl --location 'http://localhost:8080/api/rag/document/chat?message=Tell%20me%20about%20the%20notice%20period.' \
+--header 'username: testUser99'`
+2.  Invoke the tool-related API, such as requesting the current time in Frankfurt:- `curl --location 'http://localhost:8080/api/tools/local-time?message=What%20is%20the%20current%20time%20in%20Frankfurt%3F' \
+--header 'username: testUser19'`
 3.  Ensure you perform these tests to populate the actuator with more metrics.
 
 ### Exploring Specific Metrics 🔍
@@ -147,8 +149,8 @@ Let's explore some specific metrics and understand the information they provide.
 #### DB Vector Store Metrics
 
 1.  Copy the metric name for DB vector store metrics.
-2.  Access the metric using the URL: `http://localhost:8080/actuator/metrics/{metric_name}`
-    📌 **Example:** `http://localhost:8080/actuator/metrics/db.vector.client.operation`
+2.  Access the metric using the URL: [http://localhost:8080/actuator/metrics/{metric_name}](http://localhost:8080/actuator/metrics/{metric_name})
+    📌 **Example:** [http://localhost:8080/actuator/metrics/db.vector.client.operation](http://localhost:8080/actuator/metrics/db.vector.client.operation)
 3.  This provides details about the DB system, operations performed (add, query), and any errors.
 4.  The metrics include the total time to complete operations and the maximum time for a single operation.
 
@@ -157,28 +159,28 @@ Let's explore some specific metrics and understand the information they provide.
 You can filter metrics by tag to get more specific information.
 
 1.  Use the `tag` query parameter to filter by tag value.
-    📌 **Example:** To get information about query operations only: `http://localhost:8080/actuator/metrics/db.vector.client.operation?tag=db.operation:query`
+    📌 **Example:** To get information about query operations only: [http://localhost:8080/actuator/metrics/db.vector.client.operation?tag=db.operation.name:query](http://localhost:8080/actuator/metrics/db.vector.client.operation?tag=db.operation.name:query)
 2.  Replace `query` with `add` to see information about add operations.
 
 #### Token Usage Metrics
 
 The `token.usage` metric provides insights into token consumption.
 
-1.  Access the metric using the URL: `http://localhost:8080/actuator/metrics/gen_ai.token.usage`
+1.  Access the metric using the URL: [http://localhost:8080/actuator/metrics/gen_ai.client.token.usage](http://localhost:8080/actuator/metrics/gen_ai.client.token.usage)
 2.  This shows the total token consumption and metadata about the system (e.g., OpenAI).
 3.  Filter by tag to see tokens related to input or output:
-    *   Output tokens: `http://localhost:8080/actuator/metrics/gen_ai.token.usage?tag=gen_ai.token.type:output`
-    *   Input tokens: `http://localhost:8080/actuator/metrics/gen_ai.token.usage?tag=gen_ai.token.type:input`
+    *   Output tokens: [http://localhost:8080/actuator/metrics/gen_ai.client.token.usage?tag=gen_ai.token.type:output](http://localhost:8080/actuator/metrics/gen_ai.client.token.usage?tag=gen_ai.token.type:output)
+    *   Input tokens: [http://localhost:8080/actuator/metrics/gen_ai.client.token.usage?tag=gen_ai.token.type:input](http://localhost:8080/actuator/metrics/gen_ai.client.token.usage?tag=gen_ai.token.type:input)
 4.  Use the `gen_ai.operation.name` tag to filter by operation type (chat, embedding).
 
-    📌 **Example:** To get token consumption for embedding operations: `http://localhost:8080/actuator/metrics/gen_ai.token.usage?tag=gen_ai.operation.name:embedding`
+    📌 **Example:** To get token consumption for embedding operations: [http://localhost:8080/actuator/metrics/gen_ai.client.token.usage?tag=gen_ai.operation.name:embedding](http://localhost:8080/actuator/metrics/gen_ai.client.token.usage?tag=gen_ai.operation.name:embedding) and for chat: [http://localhost:8080/actuator/metrics/gen_ai.client.token.usage?tag=gen_ai.operation.name:chat](http://localhost:8080/actuator/metrics/gen_ai.client.token.usage?tag=gen_ai.operation.name:chat)
 
 #### Active Metrics
 
 Some metrics have an `active` suffix, indicating the current number of active operations.
 
-1.  Access the active metric using the URL: `http://localhost:8080/actuator/metrics/{metric_name}.active`
-    📌 **Example:** `http://localhost:8080/actuator/metrics/gen_ai.client.operation.active`
+1.  Access the active metric using the URL: [http://localhost:8080/actuator/metrics/{metric_name}.active](http://localhost:8080/actuator/metrics/{metric_name}.active)
+    📌 **Example:** [http://localhost:8080/actuator/metrics/gen_ai.client.operation](http://localhost:8080/actuator/metrics/gen_ai.client.operation) and [http://localhost:8080/actuator/metrics/gen_ai.client.operation.active](http://localhost:8080/actuator/metrics/gen_ai.client.operation.active)
 2.  This shows the number of active tasks currently running.
 3.  Trigger an operation and immediately refresh the URL to see the active task value.
 
@@ -196,13 +198,9 @@ This section explores Spring AI metrics related to advisors, tools, and chat cli
 
 To explore advisor metrics, use the `spring.ai.advisor` prefix.
 
-📌 **Example:** Accessing advisor metrics:
-
-1.  Navigate to the metrics endpoint.
-2.  Enter `spring.ai.advisor`.
+📌 **Example:** Accessing advisor metrics: [http://localhost:8080/actuator/metrics/spring.ai.advisor](http://localhost:8080/actuator/metrics/spring.ai.advisor)
 
 You'll see a list of advisors used in your application, such as:
-
 *   Simple Logging Advisor
 *   Call Message Chat
 *   Memory Advisor
@@ -214,11 +212,7 @@ These metrics show how many times each advisor was invoked and the total time ta
 
 To get information for a specific advisor, use the `tag` parameter.
 
-📌 **Example:** Getting metrics for the Simple Logger Advisor:
-
-```
-/actuator/metrics/spring.ai.advisor?tag=name:simpleLoggerAdvisor
-```
+📌 **Example:** Getting metrics for the Simple Logger Advisor: [http://localhost:8080/actuator/metrics/spring.ai.advisor?tag=spring.ai.advisor.name:SimpleLoggerAdvisor](http://localhost:8080/actuator/metrics/spring.ai.advisor?tag=spring.ai.advisor.name:SimpleLoggerAdvisor)
 
 This will show the number of times the `simpleLoggerAdvisor` was invoked and the total time it took. The `operationName` will be `framework` because Spring is triggering the advisors.  The JNI system value will be `spring_ai`.
 
@@ -226,20 +220,11 @@ This will show the number of times the `simpleLoggerAdvisor` was invoked and the
 
 The `spring.ai.tool` metric shows the list of tools executed within your application.
 
-📌 **Example:** Accessing tool metrics:
-
-1.  Navigate to the metrics endpoint.
-2.  Enter `spring.ai.tool`.
+📌 **Example:** Accessing tool metrics: [http://localhost:8080/actuator/metrics/spring.ai.tool](http://localhost:8080/actuator/metrics/spring.ai.tool)
 
 If you've triggered an operation using a tool (e.g., `getCurrentTime`), you'll see it listed. The `spring.ai.kind` will be `tool_call`, and the `operationName` will be `framework`. The JNI system value will be `spring_ai`.
 
-You can also use the `actor` suffix to see the number of active tasks related to a tool invocation.
-
-📌 **Example:** Accessing active tasks for a tool:
-
-```
-/actuator/metrics/spring.ai.tool.active
-```
+You can also use the `active` suffix to see the number of active tasks related to a tool invocation:- [http://localhost:8080/actuator/metrics/spring.ai.tool.active](http://localhost:8080/actuator/metrics/spring.ai.tool.active)
 
 In a local system with no active tasks, you'll see a value of zero. In production, this metric provides insights into current traffic.
 
@@ -247,10 +232,7 @@ In a local system with no active tasks, you'll see a value of zero. In productio
 
 The `spring.ai.chat.client` metric shows the number of operations triggered using the chat client.
 
-📌 **Example:** Accessing chat client metrics:
-
-1.  Navigate to the metrics endpoint.
-2.  Enter `spring.ai.chat.client`.
+📌 **Example:** Accessing chat client metrics: [http://localhost:8080/actuator/metrics/spring.ai.chat.client](http://localhost:8080/actuator/metrics/spring.ai.chat.client)
 
 This metric shows the number of times you contacted the LLM using the chat client (e.g., using the `prompt` method) and the total time consumed. Dividing the total time by the count gives the average time per chat operation.
 
@@ -260,23 +242,16 @@ This metric shows the number of times you contacted the LLM using the chat clien
 *   Metrics will differ from application to application based on the operations invoked and dependencies used.
 *   Expect more metrics to be added in future versions of the framework.
 
-### Enabling Metrics in Spring Applications
+### Further Information
 
-To enable metrics in your Spring application, follow these steps:
+For more details on Spring AI metrics, refer to the official documentation. Look for the "Observability" section under "References." This page provides the latest information on metrics exposed by the framework. See more here: [https://docs.spring.io/spring-ai/reference/observability/index.html](https://docs.spring.io/spring-ai/reference/observability/index.html)
 
-1.  Add the dependency related to the actuator.
-2.  Enable the metrics-related path. By default, the actuator only exposes health information.
-3.  Access the list of metrics exposed by the actuator by visiting the appropriate URL.
 
 ⚠️ **Warning:** Manually visiting metrics through URLs can be cumbersome in real applications. Consider using Prometheus to explore these metrics more efficiently.
 
-### Further Information
-
-For more details on Spring AI metrics, refer to the official documentation. Look for the "Observability" section under "References." This page provides the latest information on metrics exposed by the framework.
-
 ---
 
-## 4. Visualizing Metrics with Prometheus
+## 4. Visualizing Metrics with Prometheus 📊  Part - 1
 
 After enabling metrics exposure in our application, the next step is to visualize them using Prometheus. Here's how to set up Prometheus to collect and display these metrics:
 
@@ -285,7 +260,7 @@ Our Spring Boot application uses the **Actuator** to expose metrics. However, Pr
 
 📝 **Note:** Micrometer allows us to expose metrics in various vendor formats, including Prometheus.
 
-### Adding the Micrometer Dependency
+### Adding the Micrometer Registry Prometheus Dependency
 To use Micrometer with Prometheus, we need to add the following dependency to our `pom.xml` file:
 
 ```xml
@@ -306,7 +281,7 @@ Next, enable the Prometheus endpoint in `application.properties`:
 management.endpoints.web.exposure.include=health,metrics,prometheus
 ```
 
-Restart the application to apply these changes. You should now see a new path under the Actuator: `/actuator/prometheus`.
+Restart the application to apply these changes. You should now see a new path under the Actuator: [/actuator/prometheus](http://localhost:8080/actuator/prometheus).
 
 Accessing this URL will display the metrics in a format that Prometheus can understand.
 
@@ -317,30 +292,36 @@ To set up Prometheus, we'll use Docker. Add a new service to your `compose.yaml`
 
 ```yaml
 services:
+  qdrant:
+    image: 'qdrant/qdrant:v1.13.0'
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
     volumes:
       - ./prometheus-config.yaml:/etc/prometheus/prometheus.yml
     networks:
-      - spring-i
+      - spring-ai
     ports:
       - "9090:9090"
+
 networks:
-  spring-i:
+  spring-ai:
     driver: bridge
 ```
-
-📝 **Note:** This configuration assumes you have a Docker network named `spring-i`.
 
 This configuration does the following:
 *   Defines a service named `prometheus`.
 *   Uses the `prom/prometheus:latest` Docker image.
 *   Maps a local file `prometheus-config.yaml` to `/etc/prometheus/prometheus.yml` inside the container.
-*   Attaches the Prometheus container to the `spring-i` network.
+*   Attaches the Prometheus container to the `spring-ai` network.
 *   Exposes Prometheus on port 9090.
 
 ### Creating the Prometheus Configuration File
+
 Create a new file named `prometheus-config.yaml` in the same directory as your `compose.yaml` file. This file will contain the configuration for Prometheus to scrape metrics from our application.
 
 Add the following configuration to `prometheus-config.yaml`:
@@ -351,7 +332,7 @@ global:
   evaluation_interval: 5s
 
 scrape_configs:
-  - job_name: 'spring-aa'
+  - job_name: 'spring-ai'
     metrics_path: '/actuator/prometheus'
     scrape_interval: 5s
     static_configs:
@@ -368,19 +349,15 @@ This configuration tells Prometheus to:
 ### Restarting the Application
 After creating the `prometheus-config.yaml` file, rebuild the project and stop any running Docker containers. Then, restart the application using Docker Compose. This will start both the Quadrant database and the Prometheus container.
 
-```bash
-docker-compose up -d
-```
-
-After the application starts, you can access the Prometheus UI at `http://localhost:9090`.
+After the application starts, you can access the Prometheus UI at [http://localhost:9090](http://localhost:9090).
 
 With these steps, Prometheus is now set up to collect metrics from our Spring Boot application. In the next steps, we can explore the Prometheus UI and learn how to query and visualize these metrics.
 
 ---
 
-## 5. Monitoring Spring AI Applications with Prometheus
+## 5. Monitoring Spring AI Applications with Prometheus Part - 2
 
-You can access the Prometheus UI by navigating to `localhost:1990`. This UI provides a powerful way to monitor your application's metrics.
+You can access the Prometheus UI by navigating to `localhost:9090`. This UI provides a powerful way to monitor your application's metrics.
 
 While Prometheus offers extensive functionality, including alert creation, we'll focus on its core capabilities for monitoring Spring AI applications. DevOps teams typically handle the setup and alerting configurations in real projects. As developers, our responsibility is to expose the metrics from our Spring AI application to Prometheus, following the steps outlined previously.
 
@@ -392,12 +369,8 @@ Let's explore Prometheus at a high level:
     *   **Tabular Format:** The search results are initially displayed in a tabular format.
     *   **Graphs:** Switch to the "Graph" tab to visualize the metric data over time. You can adjust the time range (e.g., last 5 minutes, 1 hour).
 
-To see the token consumption in action, trigger your REST APIs:
-
-```bash
-# Example: Invoking a REST API
-curl http://localhost:8080/your-api-endpoint
-```
+To see the token consumption in action, trigger your REST APIs: `curl --location 'http://localhost:8080/api/rag/document/chat?message=Tell%20me%20about%20the%20notice%20period.' \
+--header 'username: testUser99'`
 
 After invoking the APIs, wait a few seconds for the changes to reflect in Prometheus. The `scrape_interval` and `evaluation_interval` in the `docker-compose.yml` file determine how frequently Prometheus updates the metrics (in our case, every 5 seconds).
 
@@ -409,43 +382,6 @@ Prometheus also offers an alert section for defining alert rules and receiving n
 
 While Prometheus is user-friendly for querying metrics, it has limitations in creating visually appealing dashboards. This is where Grafana comes in. We will integrate Prometheus with Grafana to build dashboards using the same metric data.
 
-### Revisiting the Steps for Enabling Prometheus Monitoring
-
-Before moving on, let's recap the steps to enable Prometheus monitoring in our Spring application:
-
-1.  **Add Micrometer Registry Prometheus Dependency:** This dependency exposes metrics in a format that Prometheus can understand.
-
-    ```xml
-    <!-- Example: Maven dependency -->
-    <dependency>
-        <groupId>io.micrometer</groupId>
-        <artifactId>micrometer-registry-prometheus</artifactId>
-    </dependency>
-    ```
-
-2.  **Enable Prometheus Endpoint:** Include the following property to enable the Prometheus path.
-
-    ```properties
-    # Example: application.properties
-    management.endpoints.web.exposure.include=prometheus
-    ```
-
-3.  **Set Up Prometheus with Docker:** Use Docker to set up the Prometheus container. Ensure you define the necessary volumes in the Docker configuration. This tells Prometheus where to read the metrics from.
-
-4.  **Prometheus Configuration (prometheus.yml):** The `prometheus.yml` file contains the configuration for Prometheus.
-
-    ```yaml
-    # Example: prometheus.yml
-    scrape_configs:
-      - job_name: 'spring-actuator'
-        metrics_path: '/actuator/prometheus'
-        scrape_interval: 5s
-        static_configs:
-          - targets: ['localhost:8080']
-    ```
-
-5.  **Access Prometheus UI:** After completing the setup and starting your application, access the Prometheus UI at `localhost:1990`. You can then query metrics easily through the UI.
-
 ---
 
 ## 6. Setting Up Grafana with Docker
@@ -455,10 +391,12 @@ We can set up Grafana using Docker. Here's how:
 First, we'll add a new service to our `docker-compose.yml` file for Grafana, alongside the existing Prometheus service.
 
 ```yaml
-version: "3.8"
 services:
+  qdrant:
+    # Qdrant service configuration...
   prometheus:
     # Prometheus service configuration...
+
   grafana:
     image: grafana/grafana
     container_name: grafana
@@ -467,9 +405,13 @@ services:
     volumes:
       - grafana_storage:/var/lib/grafana
     networks:
-      - spring-i2c
+      - spring-ai
+
 volumes:
   grafana_storage:
+
+networks:
+  # network configurations...
 ```
 
 This configuration does the following:
@@ -478,7 +420,7 @@ This configuration does the following:
 *   Sets the **container name** to `grafana`.
 *   Maps port **3000** on the host to port 3000 in the container, allowing us to access Grafana at `localhost:3000`.
 *   Defines a **volume** named `grafana_storage` to persist Grafana data.
-*   Attaches the Grafana service to the `spring-i2c` **network**.
+*   Attaches the Grafana service to the `spring-ai` **network**.
 
 ### Persisting Grafana Data with Volumes 💾
 
@@ -496,7 +438,7 @@ This volume is initially empty. When the container starts, any data saved inside
 
 ### Networking 🌐
 
-We attach the Grafana service to the same Docker network (`spring-i2c`) as the Prometheus service. This allows Grafana and Prometheus to communicate using service names as hostnames.
+We attach the Grafana service to the same Docker network (`spring-ai`) as the Prometheus service. This allows Grafana and Prometheus to communicate using service names as hostnames.
 
 Since both are on the same network, they can use service names as hostnames for communication.
 
@@ -506,7 +448,7 @@ After making these changes, stop and restart the application using Docker Compos
 
 ### Accessing Grafana 🔑
 
-To access Grafana, navigate to `localhost:3000` in your web browser.
+To access Grafana, navigate to [localhost:3000](http://localhost:3000/) in your web browser.
 
 The default username is `admin` and the default password is `admin`. You'll be prompted to change the password after logging in. You can skip this step.
 
@@ -520,7 +462,7 @@ To build dashboards using Prometheus data, you need to establish a connection be
 4.  Give the data source a name (e.g., "Prometheus").
 5.  In the **HTTP URL** field, enter `http://prometheus:9090`.
 
-    📝 **Note:** Use `prometheus` as the hostname because Grafana and Prometheus are on the same Docker network.
+    📝 **Note:** Don't use `localhost` instead use `prometheus` as the hostname because Grafana and Prometheus are on the same Docker network.
 6.  Click **Save & test**. A successful message confirms the integration.
 
 ### Building Dashboards 📊
@@ -528,18 +470,26 @@ To build dashboards using Prometheus data, you need to establish a connection be
 1.  Go to **Dashboards** and click **New dashboard**.
 2.  Click **Add visualization**.
 3.  Select **Prometheus** as the data source.
-4.  Enter a **metric** in the query field. 📌 **Example:** `jina_client_token_usage_total`.
-5.  Select labels to filter the data. These labels correspond to the tags in the actuator metrics page. 📌 **Example:** Select the `jni_token_type` label to filter by input, output, or total tokens.
+4.  Enter a **metric** in the query field. 📌 **Example:** `gen_ai_client_token_usage_total`.
+5.  Select labels to filter the data. These labels correspond to the tags in the actuator metrics page. 📌 **Example:** Select the `gen_ai_token_type` label to filter by input, output, or total tokens.
 6.  Click **Run queries** to display the graph.
 7.  Adjust the time range as needed. 📌 **Example:** Select "Last 15 minutes".
-8.  Give the panel a name and description. 📌 **Example:** "Jina Input Token Consumption".
+8.  Give the panel a name and description. 📌 **Example:** "Gen AI Input Token Consumption".
 9.  Choose a visualization type. The default is "Time series," but you can select other options like "Bar chart" or "Gauge."
 10. Click **Save dashboard**.
 11. Give the dashboard a name and description. 📌 **Example:** "Spring AI".
 12. Choose a folder to save the dashboard in.
 13. Click **Save**.
 
-You can add multiple panels to a dashboard, each displaying different metrics.
+You can add multiple panels to a dashboard, each displaying different metrics. 
+
+Try to integrate the tools related matrics. But since we haven't called any tools after restart so the matrices won't be available, hence first hit the api to call the tools and then add the dashboard.
+
+GetCurrentTime Tool Seconds Count
+- Matric: `spring_ai_tool_seconds_count`
+- Label filters: `spring_ai_tool_definition_name`
+- Equation: equals to (=)
+- Query: `getCurrentTime`
 
 ### Auto-Refreshing Dashboards 🔄
 
@@ -614,43 +564,35 @@ Add the following dependencies to your `pom.xml`:
 2.  Define a bean of type `OtlpGrpcSpanExporter` to export tracing information to a collector component using the OpenTelemetry protocol.
 
     ```java
-    import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
-    import org.springframework.beans.factory.annotation.Value;
-    import org.springframework.context.annotation.Bean;
-    import org.springframework.context.annotation.Configuration;
-
     @Configuration
     public class OpenTelemetryExporterConfig {
-
         @Bean
-        public OtlpGrpcSpanExporter otlpGrpcSpanExporter(@Value("${otel.exporter.otlp.endpoint}") String endpoint) {
-            return OtlpGrpcSpanExporter.builder()
-                    .setEndpoint(endpoint)
-                    .build();
+        public OtlpGrpcSpanExporter otlpGrpcSpanExporter(
+                @Value("${opentelemetry.exporter.otlp.endpoint}") String url) {
+            return OtlpGrpcSpanExporter.builder().setEndpoint(url).build();
         }
     }
     ```
 
-    This bean configuration uses the `otel.exporter.otlp.endpoint` property to specify the URL of the collector component.
+    This bean configuration uses the `opentelemetry.exporter.otlp.endpoint` property to specify the URL of the collector component.
 
 3.  Add the following properties to your `application.properties` file:
 
     ```properties
-    otel.exporter.otlp.endpoint=http://localhost:4317
+    opentelemetry.exporter.otlp.endpoint=http://localhost:4317
     management.tracing.sampling.probability=1.0
     ```
 
-    *   `otel.exporter.otlp.endpoint`: Specifies the URL of the tracing collector component (Jaeger in this case).  The default port for the collector is 4317.
+    *   `opentelemetry.exporter.otlp.endpoint`: Specifies the URL of the tracing collector component (Jaeger in this case).  The default port for the collector is 4317.
     *   `management.tracing.sampling.probability`:  Sets the sampling probability for tracing. A value of `1.0` means 100% of traffic is traced. ⚠️ **Warning:** In production, consider using a lower value (e.g., 0.1 or 0.2) to reduce overhead.
 
 ### Setting Up a Collector Component (Jaeger)
 
-A collector component aggregates tracing information for visualization. Jaeger is an open-source distributed tracing platform that can be used for this purpose. Zipkin is another alternative.
+A collector component aggregates tracing information for visualization. Jaeger is an open-source distributed tracing platform that can be used for this purpose. **Zipkin** is another alternative.
 
 To set up Jaeger using Docker, add the following service to your `compose.yaml` file:
 
 ```yaml
-version: "3.9"
 services:
   jaeger:
     image: jaegertracing/all-in-one:latest
@@ -658,11 +600,9 @@ services:
       - "16686:16686" # UI port
       - "4317:4317"   # gRPC port
     environment:
-      COLLECTOR_OTLP_ENABLED: "true"
+      - COLLECTOR_OTLP_ENABLED=true
     networks:
       - spring-ai
-networks:
-  spring-ai:
 ```
 
 This configuration sets up Jaeger using the `jaegertracing/all-in-one:latest` image. It exposes two ports:
@@ -683,13 +623,15 @@ After stopping the current running instance of the application and ensuring no r
 This will create four Docker containers during startup.
 
 ### Accessing the Zager UI
-The Zager UI can be accessed at port 1686.
+The Zager UI can be accessed at port [16686](http://localhost:16686).
 
 ### Testing the UI with Postman
 Before testing the UI, trigger some I/O operations using Postman:
 
-1.  Trigger local time related requests.
-2.  Trigger Rag document related API requests.
+1.  Trigger local time related requests:- `curl --location 'http://localhost:8080/api/tools/local-time?message=What%20is%20the%20current%20time%20in%20Frankfurt%3F' \
+--header 'username: testUser19'`
+2.  Trigger Rag document related API requests:- `curl --location 'http://localhost:8080/api/rag/random/chat?message=What%20is%20the%20current%20time%20in%20London%3F' \
+--header 'username: testUser99'`
 
 Once you get successful responses from both APIs, refresh the Zager UI.
 
@@ -778,37 +720,6 @@ https://zager.example.com/trace/B_TRACE_ID
 ```
 
 This is helpful for comparing requests sent to the same API, especially when one request takes significantly longer.
-
-### Steps to Trace I/O Operations
-The following steps are required to trace I/O operations:
-
-1.  Add the following dependencies to `pom.xml`:
-
-    ```xml
-    <dependency>
-        <groupId>io.opentelemetry</groupId>
-        <artifactId>opentelemetry-exporter-otlp</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>io.opentelemetry</groupId>
-        <artifactId>opentelemetry-sdk</artifactId>
-    </dependency>
-    ```
-
-2.  Configure a bean of type `OtlpGrpcSpanExporter`, providing the Zager endpoint details.
-
-3.  Add the following properties to `application.properties`:
-
-    ```properties
-    spring.application.name=your-application-name
-    opentelemetry.exporter.otlp.endpoint=http://localhost:4317
-    ```
-
-4.  Set up Zager using Docker.
-
-Once Zager is running, access the UI at port 1686 to view tracing information.
-
-📝 **Note:** Spring Boot handles log generation by default. For metrics and tracing, implement the changes discussed.
 
 💡 **Tip:** Implementing observability related changes in your real applications is strongly recommended.
 
